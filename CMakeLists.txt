@@ -57,34 +57,36 @@ include(MaintainerFlags)
 
 # The input variable BSON_ROOT_DIR is respected for backwards compatibility,
 # but you should use the standard CMAKE_PREFIX_PATH instead.
-message (STATUS "Searching for libbson CMake packages")
-find_package (libbson-1.0
-   "${MONGOC_MAJOR_VERSION}.${MONGOC_MINOR_VERSION}.${MONGOC_MICRO_VERSION}"
-   HINTS
-   ${BSON_ROOT_DIR}
-   REQUIRED)
+if (NOT DISABLE_PACKAGES STREQUAL ON)
+  message (STATUS "Searching for libbson CMake packages")
+  find_package (libbson-1.0
+     "${MONGOC_MAJOR_VERSION}.${MONGOC_MINOR_VERSION}.${MONGOC_MICRO_VERSION}"
+     HINTS
+     ${BSON_ROOT_DIR}
+     REQUIRED)
 
-message ("--   libbson found version \"${BSON_VERSION}\"")
-message ("--   libbson include path \"${BSON_INCLUDE_DIRS}\"")
-message ("--   libbson libraries \"${BSON_LIBRARIES}\"")
+  message ("--   libbson found version \"${BSON_VERSION}\"")
+  message ("--   libbson include path \"${BSON_INCLUDE_DIRS}\"")
+  message ("--   libbson libraries \"${BSON_LIBRARIES}\"")
 
-if (ENABLE_STATIC STREQUAL ON OR ENABLE_STATIC STREQUAL AUTO)
-   find_package (libbson-static-1.0
-      "${MONGOC_MAJOR_VERSION}.${MONGOC_MINOR_VERSION}.${MONGOC_MICRO_VERSION}"
-      HINTS
-      ${BSON_ROOT_DIR})
+  if (ENABLE_STATIC STREQUAL ON OR ENABLE_STATIC STREQUAL AUTO)
+     find_package (libbson-static-1.0
+        "${MONGOC_MAJOR_VERSION}.${MONGOC_MINOR_VERSION}.${MONGOC_MICRO_VERSION}"
+        HINTS
+        ${BSON_ROOT_DIR})
 
-   if (ENABLE_STATIC STREQUAL ON AND NOT BSON_STATIC_LIBRARY)
-      message (FATAL_ERROR "Static libbson not found. Pass -DENABLE_STATIC=OFF")
-   endif ()
+     if (ENABLE_STATIC STREQUAL ON AND NOT BSON_STATIC_LIBRARY)
+        message (FATAL_ERROR "Static libbson not found. Pass -DENABLE_STATIC=OFF")
+     endif ()
 
-   if (BSON_STATIC_LIBRARY)
-      set (MONGOC_ENABLE_STATIC ON)
-   endif ()
+     if (BSON_STATIC_LIBRARY)
+        set (MONGOC_ENABLE_STATIC ON)
+     endif ()
 
-   message ("--   libbson-static found version \"${BSON_STATIC_VERSION}\"")
-   message ("--   libbson-static include path \"${BSON_STATIC_INCLUDE_DIRS}\"")
-   message ("--   libbson-static libraries \"${BSON_STATIC_LIBRARIES}\"")
+     message ("--   libbson-static found version \"${BSON_STATIC_VERSION}\"")
+     message ("--   libbson-static include path \"${BSON_STATIC_INCLUDE_DIRS}\"")
+     message ("--   libbson-static libraries \"${BSON_STATIC_LIBRARIES}\"")
+  endif ()
 endif ()
 
 if (ENABLE_TESTS AND NOT MONGOC_ENABLE_STATIC)
