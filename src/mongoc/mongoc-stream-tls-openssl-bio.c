@@ -173,8 +173,6 @@ mongoc_stream_tls_openssl_bio_destroy (BIO *b)
    BIO_set_init (b, 0);
    BIO_set_flags (b, 0);
 
-   ((mongoc_stream_tls_openssl_t *) tls->ctx)->bio = NULL;
-
    return 1;
 }
 
