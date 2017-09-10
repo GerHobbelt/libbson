@@ -33,9 +33,9 @@ BSON_BEGIN_DECLS
  * Private storage for handling callbacks from mongoc_stream and BIO_*
  */
 typedef struct {
-   BIO *bio;
    BIO_METHOD *meth;
    SSL_CTX *ctx;
+   SSL *ssl;
 } mongoc_stream_tls_openssl_t;
 
 
