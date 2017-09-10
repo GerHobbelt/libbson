@@ -174,8 +174,6 @@ mongoc_stream_tls_openssl_bio_destroy (BIO *b)
    BIO_set_init (b, 0);
    BIO_set_flags (b, 0);
 
-   ((mongoc_stream_tls_openssl_t *) tls->ctx)->bio = NULL;
-
    return 1;
 }
 
@@ -219,14 +217,6 @@ mongoc_stream_tls_openssl_bio_read (BIO *b, char *buf, int len)
    ret = (int) mongoc_stream_read (
       tls->base_stream, buf, len, 0, tls->timeout_msec);
    BIO_clear_retry_flags (b);
-
-   if ((ret <= 0) && MONGOC_ERRNO_IS_AGAIN (errno)) {
-      /* this BIO is not the same as "b", which openssl passed in to this func.
-       * set its retry flag, which we check with BIO_should_retry in
-       * mongoc-stream-tls-openssl.c
-       */
-      BIO_set_retry_read (openssl->bio);
-   }
 
    RETURN (ret);
 }
@@ -281,14 +271,6 @@ mongoc_stream_tls_openssl_bio_write (BIO *b, const char *buf, int len)
       TRACE ("Returned short write: %d of %d", ret, len);
    } else {
       TRACE ("Completed the %d", ret);
-   }
-   if (ret <= 0 && MONGOC_ERRNO_IS_AGAIN (errno)) {
-      /* this BIO is not the same as "b", which openssl passed in to this func.
-       * set its retry flag, which we check with BIO_should_retry in
-       * mongoc-stream-tls-openssl.c
-       */
-      TRACE ("%s", "Requesting a retry");
-      BIO_set_retry_write (openssl->bio);
    }
 
    RETURN (ret);
