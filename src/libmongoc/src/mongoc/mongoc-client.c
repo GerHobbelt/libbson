@@ -983,6 +983,7 @@ _mongoc_client_recv (mongoc_client_t *client,
       &client->cluster, rpc, buffer, server_stream, error);
 }
 
+#ifndef _WIN32
 static void alloc_abort_fd(int *abort_fd, int *abort_write_fd) {
    int Pipes[2];
 #ifdef __linux__
@@ -1008,6 +1009,7 @@ static void alloc_abort_fd(int *abort_fd, int *abort_write_fd) {
    *abort_fd = Pipes[0];
    *abort_write_fd = Pipes[1];
 }
+#endif
 
 mongoc_client_t *
 mongoc_client_new (const char *uri_string)
@@ -1111,7 +1113,6 @@ mongoc_client_new_from_uri_with_error (const mongoc_uri_t *uri,
    mongoc_client_t *client;
    mongoc_topology_t *topology;
 
-
    ENTRY;
 
    BSON_ASSERT (uri);
@@ -1139,9 +1140,11 @@ mongoc_client_new_from_uri_with_error (const mongoc_uri_t *uri,
       RETURN (NULL);
    }
 
-   int abort_fd = 0;
-   int abort_write_fd = 0;
+   int abort_fd = -1;
+   int abort_write_fd = -1;
+#ifndef _WIN32
    alloc_abort_fd(&abort_fd, &abort_write_fd);
+#endif
 
    client = _mongoc_client_new_from_topology (topology, abort_fd, abort_write_fd);
    BSON_ASSERT (client);
