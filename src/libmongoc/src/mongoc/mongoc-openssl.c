@@ -1007,6 +1007,45 @@ _mongoc_openssl_ctx_new (mongoc_ssl_opt_t *opt)
 #endif
 
    SSL_CTX_set_options (ctx, ssl_ctx_options);
+   
+   static const int s_SupportedCurves[] =
+      {
+         NID_secp521r1
+         , NID_secp384r1
+#ifdef OPENSSL_IS_BORINGSSL
+         , NID_X25519
+#endif
+         , NID_X9_62_prime256v1
+      }
+   ;
+
+   SSL_CTX_set1_curves(ctx, s_SupportedCurves, sizeof(s_SupportedCurves) / sizeof(s_SupportedCurves[0]));
+   
+   static const uint16_t s_DefaultAlgos[] =
+      {
+         SSL_SIGN_ECDSA_SECP521R1_SHA512
+         , SSL_SIGN_RSA_PSS_SHA512
+         , SSL_SIGN_RSA_PKCS1_SHA512
+         , SSL_SIGN_ECDSA_SECP384R1_SHA384
+         , SSL_SIGN_RSA_PSS_SHA384
+         , SSL_SIGN_RSA_PKCS1_SHA384
+         , SSL_SIGN_ECDSA_SECP256R1_SHA256
+         , SSL_SIGN_RSA_PSS_SHA256
+         , SSL_SIGN_RSA_PKCS1_SHA256
+      }
+   ;
+
+   size_t num_algos = sizeof(s_DefaultAlgos) / sizeof(s_DefaultAlgos[0]);
+
+   if (!SSL_CTX_set_signing_algorithm_prefs(ctx, s_DefaultAlgos, num_algos)) {
+      SSL_CTX_free (ctx);
+      return NULL;
+   }
+
+   if (!SSL_CTX_set_verify_algorithm_prefs(ctx, s_DefaultAlgos, num_algos)) {
+      SSL_CTX_free (ctx);
+      return NULL;
+   }
 
 /* only defined in special build, using:
  * --enable-system-crypto-profile (autotools)
