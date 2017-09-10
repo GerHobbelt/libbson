@@ -163,6 +163,8 @@ mongoc_client_command_simple_with_server_id (
    bson_error_t *error);
 MONGOC_EXPORT (void)
 mongoc_client_destroy (mongoc_client_t *client);
+MONGOC_EXPORT (void)
+mongoc_client_abort (mongoc_client_t *client);
 MONGOC_EXPORT (mongoc_database_t *)
 mongoc_client_get_database (mongoc_client_t *client, const char *name);
 MONGOC_EXPORT (mongoc_database_t *)

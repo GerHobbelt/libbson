@@ -156,7 +156,8 @@ mongoc_topology_scanner_new (
    const mongoc_uri_t *uri,
    mongoc_topology_scanner_setup_err_cb_t setup_err_cb,
    mongoc_topology_scanner_cb_t cb,
-   void *data)
+   void *data,
+   int abort_fd)
 {
    mongoc_topology_scanner_t *ts =
       (mongoc_topology_scanner_t *) bson_malloc0 (sizeof (*ts));
@@ -173,6 +174,7 @@ mongoc_topology_scanner_new (
    ts->uri = uri;
    ts->appname = NULL;
    ts->handshake_ok_to_send = false;
+   ts->abort_fd = abort_fd;
 
    return ts;
 }
@@ -215,6 +217,18 @@ mongoc_topology_scanner_destroy (mongoc_topology_scanner_t *ts)
    bson_free ((char *) ts->appname);
 
    bson_free (ts);
+}
+
+void
+mongoc_topology_scanner_abort (mongoc_topology_scanner_t *ts)
+{
+   mongoc_topology_scanner_node_t *ele, *tmp;
+
+   DL_FOREACH_SAFE (ts->nodes, ele, tmp)
+   {
+      if (ele->stream && ele->stream->close)
+         ele->stream->close(ele->stream);
+   }
 }
 
 void
@@ -477,7 +491,7 @@ mongoc_topology_scanner_node_connect_tcp (mongoc_topology_scanner_node_t *node,
 
       mongoc_counter_dns_success_inc ();
    }
-
+   
    for (; node->current_dns_result;
         node->current_dns_result = node->current_dns_result->ai_next) {
       rp = node->current_dns_result;
@@ -486,7 +500,7 @@ mongoc_topology_scanner_node_connect_tcp (mongoc_topology_scanner_node_t *node,
        * Create a new non-blocking socket.
        */
       if (!(sock = mongoc_socket_new (
-               rp->ai_family, rp->ai_socktype, rp->ai_protocol))) {
+               rp->ai_family, rp->ai_socktype, rp->ai_protocol, node->ts->abort_fd))) {
          continue;
       }
 
@@ -536,7 +550,7 @@ mongoc_topology_scanner_node_connect_unix (mongoc_topology_scanner_node_t *node,
    saddr.sun_family = AF_UNIX;
    bson_snprintf (saddr.sun_path, sizeof saddr.sun_path - 1, "%s", host->host);
 
-   sock = mongoc_socket_new (AF_UNIX, SOCK_STREAM, 0);
+   sock = mongoc_socket_new (AF_UNIX, SOCK_STREAM, 0, node->ts->abort_fd);
 
    if (sock == NULL) {
       bson_set_error (error,
