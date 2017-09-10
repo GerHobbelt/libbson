@@ -43,10 +43,10 @@ mongoc_openssl_ocsp_opt_destroy (void *ocsp_opt);
  * Private storage for handling callbacks from mongoc_stream and BIO_*
  */
 typedef struct {
-   BIO *bio;
    BIO_METHOD *meth;
    SSL_CTX *ctx;
    mongoc_openssl_ocsp_opt_t *ocsp_opts;
+   SSL *ssl;
 } mongoc_stream_tls_openssl_t;
 
 
