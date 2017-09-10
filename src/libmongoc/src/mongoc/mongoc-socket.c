@@ -1050,7 +1050,9 @@ mongoc_socket_new (int domain,   /* IN */
 
    sock = (mongoc_socket_t *) bson_malloc0 (sizeof *sock);
    sock->sd = sd;
+#ifndef _WIN32
    sock->abort_fd = abort_fd;
+#endif
    sock->domain = domain;
 #ifdef _WIN32
    sock->pid = (int) _getpid ();
