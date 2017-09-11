@@ -38,6 +38,7 @@ endif()
 mongo_pick(MONGOC_ENABLE_SRV 1 0 ENABLE_SRV)
 
 set (MONGOC_OUTPUT_BASENAME "mongoc" CACHE STRING "Output mongoc library base name")
+set (MONGOC_ENABLE_EXECUTABLES "mongoc" CACHE BOOL ON)
 
 if (NOT ENABLE_ZLIB MATCHES "SYSTEM|AUTO|BUNDLED|OFF")
    message (FATAL_ERROR
@@ -213,7 +214,12 @@ set(OpenSSL/pkg_config_LIBS -lssl -lcrypto $<$<PLATFORM_ID:Windows>:crypt32.lib>
 function(_use_named_tls_lib libname)
    # Use this property to track what package we import for our TLS libraries:
    set_property(DIRECTORY PROPERTY _mongoc-tls-package NO)
-   if(libname STREQUAL "OPENSSL")
+   if(libname STREQUAL "EXTERNAL_OPENSSL")
+      set(OPENSSL_FOUND 1)
+      set(EXTERNAL_OPENSSL 1)
+      set(backend OpenSSL)
+      set_property(DIRECTORY PROPERTY _mongoc-tls-package OpenSSL)
+   elseif(libname STREQUAL "OPENSSL")
       find_package(OpenSSL REQUIRED)
       set(backend OpenSSL)
       set_property(DIRECTORY PROPERTY _mongoc-tls-package OpenSSL)
@@ -228,8 +234,10 @@ function(_use_named_tls_lib libname)
    install(TARGETS _mongoc-tls_backend EXPORT mongoc-targets)
    target_link_libraries(_mongoc-dependencies INTERFACE _mongoc-tls_backend)
    set_property(TARGET _mongoc-tls_backend PROPERTY EXPORT_NAME detail::c_tls_backend)
-   target_link_libraries(_mongoc-tls_backend INTERFACE ${${backend}/LINK_LIBRARIES})
-   target_link_options(_mongoc-tls_backend INTERFACE ${${backend}/LINK_OPTIONS})
+   if (NOT libname STREQUAL "EXTERNAL_OPENSSL")
+      target_link_libraries(_mongoc-tls_backend INTERFACE ${${backend}/LINK_LIBRARIES})
+      target_link_options(_mongoc-tls_backend INTERFACE ${${backend}/LINK_OPTIONS})
+   endif()
    set_property(DIRECTORY PROPERTY _mongoc-tls-backend "${backend}")
 endfunction()
 
@@ -261,7 +269,7 @@ add_feature_info("Cryptography" "${MONGOC_ENABLE_CRYPTO}" "cryptographic primiti
 
 include(CMakePushCheckState)
 include(CheckSymbolExists)
-if(TLS_BACKEND STREQUAL "OpenSSL")
+if(TLS_BACKEND STREQUAL "OpenSSL" AND NOT ENABLE_SSL STREQUAL "EXTERNAL_OPENSSL")
    # Check for newer OpenSSL string functions
    cmake_push_check_state()
    list(APPEND CMAKE_REQUIRED_LIBRARIES OpenSSL::SSL OpenSSL::Crypto)
@@ -1325,6 +1333,7 @@ if (ENABLE_SHARED)
 endif ()
 
 
+if (MONGOC_ENABLE_EXECUTABLES)
 
 install (
    TARGETS ${TARGETS_TO_INSTALL}
@@ -1358,6 +1367,8 @@ endif()
 
 # Relative include-path will be given the install prefix:
 set_property(TARGET ${TARGETS_TO_INSTALL} APPEND PROPERTY pkg_config_INCLUDE_DIRECTORIES "${MONGOC_INSTALL_INCLUDEDIR}")
+
+endif()
 
 install (EXPORT mongoc-targets
    FILE mongoc-targets.cmake
