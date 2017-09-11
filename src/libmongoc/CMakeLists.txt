@@ -36,6 +36,7 @@ set (MONGOC_ENABLE_COMPRESSION_ZSTD 0)
 mongo_pick(MONGOC_ENABLE_SRV 1 0 ENABLE_SRV)
 
 set (MONGOC_OUTPUT_BASENAME "mongoc" CACHE STRING "Output mongoc library base name")
+set (MONGOC_ENABLE_EXECUTABLES "mongoc" CACHE BOOL ON)
 
 if (NOT ENABLE_ZLIB MATCHES "SYSTEM|AUTO|BUNDLED|OFF")
    message (FATAL_ERROR
@@ -201,7 +202,12 @@ set(OpenSSL/pkg_config_LIBS -lssl -lcrypto $<$<PLATFORM_ID:Windows>:crypt32.lib>
 function(_use_named_tls_lib libname)
    # Use this property to track what package we import for our TLS libraries:
    set_property(DIRECTORY PROPERTY _mongoc-tls-package NO)
-   if(libname STREQUAL "OPENSSL")
+   if(libname STREQUAL "EXTERNAL_OPENSSL")
+      set(OPENSSL_FOUND 1)
+      set(EXTERNAL_OPENSSL 1)
+      set(backend OpenSSL)
+      set_property(DIRECTORY PROPERTY _mongoc-tls-package OpenSSL)
+   elseif(libname STREQUAL "OPENSSL")
       find_package(OpenSSL REQUIRED)
       set(backend OpenSSL)
       set_property(DIRECTORY PROPERTY _mongoc-tls-package OpenSSL)
@@ -224,8 +230,10 @@ function(_use_named_tls_lib libname)
    install(TARGETS _mongoc-tls_backend EXPORT mongoc-targets)
    target_link_libraries(_mongoc-dependencies INTERFACE _mongoc-tls_backend)
    set_property(TARGET _mongoc-tls_backend PROPERTY EXPORT_NAME detail::c_tls_backend)
-   target_link_libraries(_mongoc-tls_backend INTERFACE ${${backend}/LINK_LIBRARIES})
-   target_link_options(_mongoc-tls_backend INTERFACE ${${backend}/LINK_OPTIONS})
+   if (NOT libname STREQUAL "EXTERNAL_OPENSSL")
+      target_link_libraries(_mongoc-tls_backend INTERFACE ${${backend}/LINK_LIBRARIES})
+      target_link_options(_mongoc-tls_backend INTERFACE ${${backend}/LINK_OPTIONS})
+   endif()
    set_property(DIRECTORY PROPERTY _mongoc-tls-backend "${backend}")
 endfunction()
 
@@ -264,7 +272,7 @@ add_feature_info("Cryptography" "${MONGOC_ENABLE_CRYPTO}" "cryptographic primiti
 
 include(CMakePushCheckState)
 include(CheckSymbolExists)
-if(TLS_BACKEND STREQUAL "OpenSSL")
+if(TLS_BACKEND STREQUAL "OpenSSL" AND NOT ENABLE_SSL STREQUAL "EXTERNAL_OPENSSL")
    # Check for newer OpenSSL string functions
    cmake_push_check_state()
    list(APPEND CMAKE_REQUIRED_LIBRARIES OpenSSL::SSL OpenSSL::Crypto)
@@ -1311,63 +1319,65 @@ set (MONGOC_HEADER_INSTALL_DIR
    "${CMAKE_INSTALL_INCLUDEDIR}/libmongoc-${MONGOC_API_VERSION}"
 )
 
-install (
-   TARGETS ${TARGETS_TO_INSTALL}
-   EXPORT mongoc-targets
-   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-   INCLUDES DESTINATION ${MONGOC_HEADER_INSTALL_DIR}
-   FRAMEWORK DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
-
-install (
-   FILES ${HEADERS}
-   DESTINATION "${MONGOC_HEADER_INSTALL_DIR}/mongoc"
-)
-
-install (
-   FILES ${HEADERS_FORWARDING}
-   DESTINATION "${MONGOC_HEADER_INSTALL_DIR}"
-)
-
-if (ENABLE_APPLE_FRAMEWORK)
+if (MONGOC_ENABLE_EXECUTABLES)
    install (
-      FILES "${PROJECT_BINARY_DIR}/src/mongoc/modules/module.modulemap"
-      DESTINATION "${CMAKE_INSTALL_BINDIR}/mongoc.framework/Modules/"
+      TARGETS ${TARGETS_TO_INSTALL}
+      EXPORT mongoc-targets
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+      INCLUDES DESTINATION ${MONGOC_HEADER_INSTALL_DIR}
+      FRAMEWORK DESTINATION ${CMAKE_INSTALL_BINDIR}
    )
-endif ()
 
-# Collect link items for the static library to be inserted into the pkg-config
-if(TARGET mongoc_static)
-   set(link_options ${ZLIB_LIBRARIES}
-      ${SNAPPY_LIBRARIES} ${MONGOC_ZSTD_LIBRARIES} ${LIBMONGOCRYPT_LIBRARY})
-   # Replace all absolute paths with search-dir link-file options:
-   list(TRANSFORM link_options
-        REPLACE "^(.+)/lib([^/\\.]+)\\..+$"
-                "-L\\1;-l\\2"
-        REGEX "^/")
-   # Prepend "-l" to all bare names:
-   list(TRANSFORM link_options PREPEND "-l" REGEX "^[^-]")
-   list(REMOVE_DUPLICATES link_options)
-   message(DEBUG "Computed static library link options: ${link_options}")
-   set_property(TARGET mongoc_static APPEND PROPERTY pkg_config_LIBS ${link_options})
+   install (
+      FILES ${HEADERS}
+      DESTINATION "${MONGOC_HEADER_INSTALL_DIR}/mongoc"
+   )
+
+   install (
+      FILES ${HEADERS_FORWARDING}
+      DESTINATION "${MONGOC_HEADER_INSTALL_DIR}"
+   )
+
+   if (ENABLE_APPLE_FRAMEWORK)
+      install (
+         FILES "${PROJECT_BINARY_DIR}/src/mongoc/modules/module.modulemap"
+         DESTINATION "${CMAKE_INSTALL_BINDIR}/mongoc.framework/Modules/"
+      )
+   endif ()
+
+   # Collect link items for the static library to be inserted into the pkg-config
+   if(TARGET mongoc_static)
+      set(link_options ${ZLIB_LIBRARIES}
+         ${SNAPPY_LIBRARIES} ${MONGOC_ZSTD_LIBRARIES} ${LIBMONGOCRYPT_LIBRARY})
+      # Replace all absolute paths with search-dir link-file options:
+      list(TRANSFORM link_options
+           REPLACE "^(.+)/lib([^/\\.]+)\\..+$"
+                   "-L\\1;-l\\2"
+           REGEX "^/")
+      # Prepend "-l" to all bare names:
+      list(TRANSFORM link_options PREPEND "-l" REGEX "^[^-]")
+      list(REMOVE_DUPLICATES link_options)
+      message(DEBUG "Computed static library link options: ${link_options}")
+      set_property(TARGET mongoc_static APPEND PROPERTY pkg_config_LIBS ${link_options})
+   endif()
+
+   # Relative include-path will be given the install prefix:
+   set_property(TARGET ${TARGETS_TO_INSTALL} APPEND PROPERTY pkg_config_INCLUDE_DIRECTORIES "${MONGOC_HEADER_INSTALL_DIR}")
+
+   # Deprecated alias for libmongoc-1.0.pc, see CDRIVER-2086.
+   if (MONGOC_ENABLE_SSL)
+      configure_file (
+         ${CMAKE_CURRENT_SOURCE_DIR}/src/libmongoc-ssl-1.0.pc.in
+         ${CMAKE_CURRENT_BINARY_DIR}/src/libmongoc-ssl-1.0.pc
+      @ONLY)
+      install (
+         FILES ${CMAKE_CURRENT_BINARY_DIR}/src/libmongoc-ssl-1.0.pc
+         DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+      )
+   endif ()
 endif()
-
-# Relative include-path will be given the install prefix:
-set_property(TARGET ${TARGETS_TO_INSTALL} APPEND PROPERTY pkg_config_INCLUDE_DIRECTORIES "${MONGOC_HEADER_INSTALL_DIR}")
-
-# Deprecated alias for libmongoc-1.0.pc, see CDRIVER-2086.
-if (MONGOC_ENABLE_SSL)
-   configure_file (
-      ${CMAKE_CURRENT_SOURCE_DIR}/src/libmongoc-ssl-1.0.pc.in
-      ${CMAKE_CURRENT_BINARY_DIR}/src/libmongoc-ssl-1.0.pc
-   @ONLY)
-   install (
-      FILES ${CMAKE_CURRENT_BINARY_DIR}/src/libmongoc-ssl-1.0.pc
-      DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
-   )
-endif ()
 
 include (CMakePackageConfigHelpers)
 

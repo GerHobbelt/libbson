@@ -112,7 +112,7 @@ mongo_bool_setting(USE_BUNDLED_UTF8PROC "Enable building with utf8proc. Needed f
                    ADVANCED)
 mongo_setting(
    ENABLE_SSL [[Enable TLS connection and SCRAM authentication.]]
-   OPTIONS WINDOWS DARWIN OPENSSL LIBRESSL OFF AUTO
+   OPTIONS WINDOWS DARWIN OPENSSL EXTERNAL_OPENSSL LIBRESSL OFF AUTO
    DEFAULT VALUE AUTO
    VALIDATE CODE [[
       if(ENABLE_SSL STREQUAL "DARWIN" AND NOT APPLE)
