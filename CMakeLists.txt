@@ -99,6 +99,7 @@ if (NOT ENABLE_SSL STREQUAL OFF)
    endif ()
 
    if (ENABLE_SSL STREQUAL EXTERNAL_OPENSSL)
+      set (OPENSSL_FOUND 1)
       set (EXTERNAL_OPENSSL 1)
    endif ()
 
