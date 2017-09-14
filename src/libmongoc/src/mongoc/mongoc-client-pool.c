@@ -314,7 +314,7 @@ mongoc_client_pool_pop (mongoc_client_pool_t *pool)
 again:
    if (!(client = (mongoc_client_t *) _mongoc_queue_pop_head (&pool->queue))) {
       if (pool->size < pool->max_pool_size) {
-         client = _mongoc_client_new_from_topology (pool->topology);
+         client = _mongoc_client_new_from_topology (pool->topology, -1, -1);
          BSON_ASSERT (client);
          _initialize_new_client (pool, client);
          pool->size++;
@@ -358,7 +358,7 @@ mongoc_client_pool_try_pop (mongoc_client_pool_t *pool)
 
    if (!(client = (mongoc_client_t *) _mongoc_queue_pop_head (&pool->queue))) {
       if (pool->size < pool->max_pool_size) {
-         client = _mongoc_client_new_from_topology (pool->topology);
+         client = _mongoc_client_new_from_topology (pool->topology, -1, -1);
          BSON_ASSERT (client);
          _initialize_new_client (pool, client);
          pool->size++;
