@@ -18,6 +18,11 @@
 #include "string.h"
 #include <stdint.h> /* for INT64_MAX and INT64_MIN */
 
+#ifdef _MSC_VER
+#pragma warning(disable:4028)
+#pragma warning(disable:4244)
+#endif
+
 /* Unlike <ctype.h>'s isdigit, this also works if c < 0 | c > UCHAR_MAX. */
 #define is_digit(c) ((unsigned) (c) - '0' <= 9)
 

@@ -724,14 +724,8 @@ static bool
 _mongoc_stream_tls_openssl_should_retry (mongoc_stream_t *stream)
 {
    mongoc_stream_tls_t *tls = (mongoc_stream_tls_t *) stream;
-   mongoc_stream_tls_openssl_t *openssl =
-      (mongoc_stream_tls_openssl_t *) tls->ctx;
 
    ENTRY;
-
-   if (BIO_should_retry (openssl->bio)) {
-      RETURN (true);
-   }
 
    RETURN (mongoc_stream_should_retry (tls->base_stream));
 }
