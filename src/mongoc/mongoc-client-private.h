@@ -92,6 +92,9 @@ struct _mongoc_client_t {
 
    int32_t error_api_version;
    bool error_api_set;
+	
+   int abort_fd;
+   int abort_write_fd;
 };
 
 
@@ -110,7 +113,9 @@ BSON_STATIC_ASSERT (MONGOC_CMD_RW == (MONGOC_CMD_READ | MONGOC_CMD_WRITE));
 
 mongoc_client_t *
 _mongoc_client_new_from_uri (const mongoc_uri_t *uri,
-                             mongoc_topology_t *topology);
+                             mongoc_topology_t *topology,
+                             int abort_fd,
+                             int abort_fd_write);
 
 bool
 _mongoc_client_set_apm_callbacks_private (mongoc_client_t *client,
