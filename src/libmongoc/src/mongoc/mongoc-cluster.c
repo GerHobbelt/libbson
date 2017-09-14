@@ -2735,6 +2735,48 @@ _mongoc_cluster_select_server_id (mongoc_client_session_t *cs,
    return server_id;
 }
 
+static bool
+_mongoc_cluster_abort_node(void *item, void *ctx)
+{
+   mongoc_cluster_node_t *node = (mongoc_cluster_node_t *) item;
+   
+   if (node->stream && node->stream->close)
+      node->stream->close(node->stream);
+
+   return true;
+}
+
+/*
+ *--------------------------------------------------------------------------
+ *
+ * mongoc_cluster_abort --
+ *
+ *       Abort all streams in cluster
+ *
+ * Returns:
+ *       None.
+ *
+ * Side effects:
+ *       All streams are clased.
+ *
+ *--------------------------------------------------------------------------
+ */
+
+void
+mongoc_cluster_abort (mongoc_cluster_t *cluster) /* INOUT */
+{
+   ENTRY;
+
+   BSON_ASSERT (cluster);
+
+   mongoc_set_for_each (cluster->nodes,
+                        _mongoc_cluster_abort_node,
+                        NULL);
+
+   EXIT;
+}
+
+
 /*
  *--------------------------------------------------------------------------
  *
