@@ -92,6 +92,8 @@ typedef struct mongoc_topology_scanner {
 
    mongoc_apm_callbacks_t apm_callbacks;
    void *apm_context;
+
+   int abort_fd;
 } mongoc_topology_scanner_t;
 
 mongoc_topology_scanner_t *
@@ -99,13 +101,17 @@ mongoc_topology_scanner_new (
    const mongoc_uri_t *uri,
    mongoc_topology_scanner_setup_err_cb_t setup_err_cb,
    mongoc_topology_scanner_cb_t cb,
-   void *data);
+   void *data,
+   int abort_fd);
 
 void
 mongoc_topology_scanner_destroy (mongoc_topology_scanner_t *ts);
 
 bool
 mongoc_topology_scanner_valid (mongoc_topology_scanner_t *ts);
+
+void
+mongoc_topology_scanner_abort (mongoc_topology_scanner_t *ts);
 
 void
 mongoc_topology_scanner_add (mongoc_topology_scanner_t *ts,

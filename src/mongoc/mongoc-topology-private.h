@@ -56,6 +56,7 @@ typedef struct _mongoc_topology_t {
    mongoc_thread_t thread;
 
    mongoc_topology_scanner_state_t scanner_state;
+   int abort_fd;
    bool scan_requested;
    bool shutdown_requested;
    bool single_threaded;
@@ -65,7 +66,7 @@ typedef struct _mongoc_topology_t {
 } mongoc_topology_t;
 
 mongoc_topology_t *
-mongoc_topology_new (const mongoc_uri_t *uri, bool single_threaded);
+mongoc_topology_new (const mongoc_uri_t *uri, bool single_threaded, int abort_fd);
 
 void
 mongoc_topology_set_apm_callbacks (mongoc_topology_t *topology,
@@ -74,6 +75,9 @@ mongoc_topology_set_apm_callbacks (mongoc_topology_t *topology,
 
 void
 mongoc_topology_destroy (mongoc_topology_t *topology);
+
+void
+mongoc_topology_abort (mongoc_topology_t *topology);
 
 bool
 mongoc_topology_compatible (const mongoc_topology_description_t *td,
