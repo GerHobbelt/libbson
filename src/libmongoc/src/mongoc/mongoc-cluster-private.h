@@ -80,6 +80,9 @@ void
 mongoc_cluster_reset_sockettimeoutms (mongoc_cluster_t *cluster);
 
 void
+mongoc_cluster_abort (mongoc_cluster_t *cluster);
+
+void
 mongoc_cluster_disconnect_node (mongoc_cluster_t *cluster, uint32_t id);
 
 int32_t
