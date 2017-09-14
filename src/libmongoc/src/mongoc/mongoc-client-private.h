@@ -95,6 +95,9 @@ struct _mongoc_client_t {
    /* mongoc_client_session_t's in use, to look up lsids and clusterTimes */
    mongoc_set_t *client_sessions;
    unsigned int csid_rand_seed;
+	
+   int abort_fd;
+   int abort_write_fd;
 };
 
 
@@ -121,7 +124,9 @@ _mongoc_client_get_rr (const char *service,
                        bson_error_t *error);
 
 mongoc_client_t *
-_mongoc_client_new_from_uri (mongoc_topology_t *topology);
+_mongoc_client_new_from_uri (mongoc_topology_t *topology,
+                             int abort_fd,
+                             int abort_fd_write);
 
 bool
 _mongoc_client_set_apm_callbacks_private (mongoc_client_t *client,

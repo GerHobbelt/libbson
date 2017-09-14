@@ -199,7 +199,7 @@ _mongoc_topology_scanner_cb (uint32_t id,
  *-------------------------------------------------------------------------
  */
 mongoc_topology_t *
-mongoc_topology_new (const mongoc_uri_t *uri, bool single_threaded)
+mongoc_topology_new (const mongoc_uri_t *uri, bool single_threaded, int abort_fd)
 {
    int64_t heartbeat_default;
    int64_t heartbeat;
@@ -276,7 +276,9 @@ mongoc_topology_new (const mongoc_uri_t *uri, bool single_threaded)
                                    _mongoc_topology_scanner_setup_err_cb,
                                    _mongoc_topology_scanner_cb,
                                    topology,
-                                   topology->connect_timeout_msec);
+                                   topology->connect_timeout_msec,
+                                   abort_fd);
+   topology->abort_fd = abort_fd;
 
    mongoc_mutex_init (&topology->mutex);
    mongoc_cond_init (&topology->cond_client);
@@ -420,6 +422,30 @@ mongoc_topology_destroy (mongoc_topology_t *topology)
    bson_free (topology);
 }
 
+/*
+ *-------------------------------------------------------------------------
+ *
+ * mongoc_topology_destroy --
+ *
+ *       Abort streams in topology
+ *
+ * Returns:
+ *       None.
+ *
+ * Side effects:
+ *       Streams will be closed
+ *
+ *-------------------------------------------------------------------------
+ */
+void
+mongoc_topology_abort (mongoc_topology_t *topology)
+{
+   if (!topology) {
+      return;
+   }
+
+   mongoc_topology_scanner_abort (topology->scanner);
+}
 
 /*
  *--------------------------------------------------------------------------
