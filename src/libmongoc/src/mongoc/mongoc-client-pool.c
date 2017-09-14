@@ -108,7 +108,7 @@ mongoc_client_pool_new (const mongoc_uri_t *uri)
    pool->max_pool_size = 100;
    pool->size = 0;
 
-   topology = mongoc_topology_new (uri, false);
+   topology = mongoc_topology_new (uri, false, -1);
    pool->topology = topology;
    pool->error_api_version = MONGOC_ERROR_API_VERSION_LEGACY;
 
@@ -242,7 +242,7 @@ mongoc_client_pool_pop (mongoc_client_pool_t *pool)
 again:
    if (!(client = (mongoc_client_t *) _mongoc_queue_pop_head (&pool->queue))) {
       if (pool->size < pool->max_pool_size) {
-         client = _mongoc_client_new_from_uri (pool->topology);
+         client = _mongoc_client_new_from_uri (pool->topology, -1, -1);
          _initialize_new_client (pool, client);
          pool->size++;
       } else {
@@ -271,7 +271,7 @@ mongoc_client_pool_try_pop (mongoc_client_pool_t *pool)
 
    if (!(client = (mongoc_client_t *) _mongoc_queue_pop_head (&pool->queue))) {
       if (pool->size < pool->max_pool_size) {
-         client = _mongoc_client_new_from_uri (pool->topology);
+         client = _mongoc_client_new_from_uri (pool->topology, -1, -1);
          _initialize_new_client (pool, client);
          pool->size++;
       }
