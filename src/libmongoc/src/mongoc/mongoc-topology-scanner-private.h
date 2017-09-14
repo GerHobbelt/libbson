@@ -142,6 +142,8 @@ typedef struct mongoc_topology_scanner {
 
    mongoc_server_api_t *api;
    bool loadbalanced;
+
+   int abort_fd;
 } mongoc_topology_scanner_t;
 
 mongoc_topology_scanner_t *
@@ -150,13 +152,17 @@ mongoc_topology_scanner_new (
    mongoc_topology_scanner_setup_err_cb_t setup_err_cb,
    mongoc_topology_scanner_cb_t cb,
    void *data,
-   int64_t connect_timeout_msec);
+   int64_t connect_timeout_msec,
+   int abort_fd);
 
 void
 mongoc_topology_scanner_destroy (mongoc_topology_scanner_t *ts);
 
 bool
 mongoc_topology_scanner_valid (mongoc_topology_scanner_t *ts);
+
+void
+mongoc_topology_scanner_abort (mongoc_topology_scanner_t *ts);
 
 void
 mongoc_topology_scanner_add (mongoc_topology_scanner_t *ts,

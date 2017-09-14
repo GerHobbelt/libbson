@@ -87,7 +87,8 @@ mongoc_socket_listen (mongoc_socket_t *sock, unsigned int backlog);
 MONGOC_EXPORT (mongoc_socket_t *)
 mongoc_socket_new (int domain,
                    int type,
-                   int protocol) BSON_GNUC_WARN_UNUSED_RESULT;
+                   int protocol,
+                   int abort_fd) BSON_GNUC_WARN_UNUSED_RESULT;
 MONGOC_EXPORT (ssize_t)
 mongoc_socket_recv (mongoc_socket_t *sock,
                     void *buf,
