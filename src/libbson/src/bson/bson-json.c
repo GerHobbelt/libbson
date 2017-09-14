@@ -39,6 +39,12 @@
 #endif
 
 #ifdef _MSC_VER
+#pragma warning(disable:4018)
+#pragma warning(disable:4146)
+#pragma warning(disable:4267)
+#endif
+
+#ifdef _MSC_VER
 #define SSCANF sscanf_s
 #else
 #define SSCANF sscanf
