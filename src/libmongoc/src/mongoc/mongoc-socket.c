@@ -418,7 +418,7 @@ _mongoc_socket_setkeepalive_windows (SOCKET sd)
       /* https://technet.microsoft.com/en-us/library/cc957548.aspx */
       DWORD default_keepaliveinterval = 1000; /* 1 second */
 
-      if (RegQueryValueEx (
+      if (RegQueryValueExA (
              hKey, "KeepAliveTime", NULL, &type, (LPBYTE) &data, &data_size) ==
           ERROR_SUCCESS) {
          if (type == REG_DWORD && data < keepalive.keepalivetime) {
@@ -428,7 +428,7 @@ _mongoc_socket_setkeepalive_windows (SOCKET sd)
          keepalive.keepalivetime = default_keepalivetime;
       }
 
-      if (RegQueryValueEx (hKey,
+      if (RegQueryValueExA (hKey,
                            "KeepAliveInterval",
                            NULL,
                            &type,
