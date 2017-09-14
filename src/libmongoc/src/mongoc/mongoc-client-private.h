@@ -119,6 +119,9 @@ struct _mongoc_client_t {
    /* mongoc_client_session_t's in use, to look up lsids and clusterTimes */
    mongoc_set_t *client_sessions;
    unsigned int csid_rand_seed;
+	
+   int abort_fd;
+   int abort_write_fd;
 
    uint32_t generation;
 };
@@ -150,7 +153,9 @@ _mongoc_client_get_rr (const char *hostname,
                        bson_error_t *error);
 
 mongoc_client_t *
-_mongoc_client_new_from_topology (mongoc_topology_t *topology);
+_mongoc_client_new_from_topology (mongoc_topology_t *topology
+                                  int abort_fd,
+                                  int abort_fd_write);
 
 bool
 _mongoc_client_set_apm_callbacks_private (mongoc_client_t *client, mongoc_apm_callbacks_t *callbacks, void *context);
@@ -211,7 +216,7 @@ void
 _mongoc_client_end_sessions (mongoc_client_t *client);
 
 mongoc_stream_t *
-mongoc_client_connect_tcp (int32_t connecttimeoutms, const mongoc_host_list_t *host, bson_error_t *error);
+mongoc_client_connect_tcp (int32_t connecttimeoutms, const mongoc_host_list_t *host, bson_error_t *error, int abort_fd);
 
 mongoc_stream_t *
 mongoc_client_connect (bool buffered,
@@ -220,7 +225,8 @@ mongoc_client_connect (bool buffered,
                        const mongoc_uri_t *uri,
                        const mongoc_host_list_t *host,
                        void *openssl_ctx_void,
-                       bson_error_t *error);
+                       bson_error_t *error,
+                       int abort_fd);
 
 
 /* Returns true if a versioned server API has been selected, otherwise returns

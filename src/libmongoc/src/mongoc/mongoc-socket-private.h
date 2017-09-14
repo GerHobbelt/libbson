@@ -28,6 +28,7 @@ struct _mongoc_socket_t {
    SOCKET sd;
 #else
    int sd;
+   int abort_fd;
 #endif
    int errno_;
    int domain;
