@@ -24,6 +24,11 @@
 #include "bson-macros.h"
 #include "bson-string.h"
 
+#ifdef _MSC_VER
+#pragma warning(disable:4028)
+#pragma warning(disable:4267)
+#endif
+
 
 #define BSON_DECIMAL128_EXPONENT_MAX 6111
 #define BSON_DECIMAL128_EXPONENT_MIN -6176
@@ -282,7 +287,7 @@ bson_decimal128_to_string (const bson_decimal128_t *dec, /* IN  */
 
          if (radix_position > 0) { /* non-zero digits before radix */
             for (i = 0;
-                 i < radix_position && (str_out - str) < BSON_DECIMAL128_STRING;
+                 i < (size_t)radix_position && (str_out - str) < BSON_DECIMAL128_STRING;
                  i++) {
                *(str_out++) = *(significand_read++) + '0';
             }
@@ -623,7 +628,7 @@ bson_decimal128_from_string_w_len (const char *string,     /* IN */
    /* to represent user input */
 
    /* Overflow prevention */
-   if (exponent <= radix_position && radix_position - exponent > (1 << 14)) {
+   if (exponent <= (int32_t)radix_position && radix_position - exponent > (1 << 14)) {
       exponent = BSON_DECIMAL128_EXPONENT_MIN;
    } else {
       exponent -= radix_position;
