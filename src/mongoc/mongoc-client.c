@@ -99,13 +99,13 @@ _mongoc_client_killcursors_command (mongoc_cluster_t *cluster,
 #ifdef MONGOC_HAVE_DNSAPI
 
 typedef bool (*mongoc_rr_callback_t) (const char *service,
-                                      PDNS_RECORD pdns,
+                                      PDNS_RECORDA pdns,
                                       mongoc_uri_t *uri,
                                       bson_error_t *error);
 
 static bool
 srv_callback (const char *service,
-              PDNS_RECORD pdns,
+              PDNS_RECORDA pdns,
               mongoc_uri_t *uri,
               bson_error_t *error)
 {
@@ -115,7 +115,7 @@ srv_callback (const char *service,
 
 static bool
 txt_callback (const char *service,
-              PDNS_RECORD pdns,
+              PDNS_RECORDA pdns,
               mongoc_uri_t *uri,
               bson_error_t *error)
 {
@@ -167,7 +167,7 @@ _mongoc_get_rr_dnsapi (const char *service,
    const char *rr_type_name;
    WORD nst;
    mongoc_rr_callback_t callback;
-   PDNS_RECORD pdns = NULL;
+   PDNS_RECORDA pdns = NULL;
    DNS_STATUS res;
    LPVOID lpMsgBuf = NULL;
    bool dns_success;
@@ -194,7 +194,7 @@ _mongoc_get_rr_dnsapi (const char *service,
                         nst,
                         DNS_QUERY_BYPASS_CACHE,
                         NULL /* IP Address */,
-                        &pdns,
+                        (PDNS_RECORD *)&pdns,
                         0 /* reserved */);
 
    if (res) {
