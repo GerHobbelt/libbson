@@ -744,7 +744,7 @@ mongoc_stream_tls_openssl_new (mongoc_stream_t *base_stream,
           inet_pton (AF_INET6, host, &addr6)) {
          X509_VERIFY_PARAM_set1_ip_asc (param, host);
       } else {
-         X509_VERIFY_PARAM_set1_host (param, host, 0);
+         X509_VERIFY_PARAM_set1_host (param, host, strlen(host));
       }
       SSL_CTX_set1_param (ssl_ctx, param);
       X509_VERIFY_PARAM_free (param);
