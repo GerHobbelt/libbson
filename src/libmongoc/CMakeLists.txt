@@ -768,43 +768,45 @@ if (MONGOC_ENABLE_MONGODB_AWS_AUTH)
    endif()
 endif ()
 
-add_library (mongoc_shared SHARED ${SOURCES} ${HEADERS} ${HEADERS_FORWARDING})
-set_target_properties (mongoc_shared PROPERTIES CMAKE_CXX_VISIBILITY_PRESET hidden)
-target_link_libraries (mongoc_shared PRIVATE ${LIBRARIES} PUBLIC ${BSON_LIBRARIES})
-target_include_directories (mongoc_shared BEFORE PUBLIC ${MONGOC_INTERNAL_INCLUDE_DIRS})
-target_include_directories (mongoc_shared PRIVATE ${ZLIB_INCLUDE_DIRS})
-target_include_directories (mongoc_shared PRIVATE ${LIBMONGOCRYPT_INCLUDE_DIRECTORIES})
-if (MONGOC_ENABLE_MONGODB_AWS_AUTH)
-   target_include_directories (mongoc_shared PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../kms-message/src")
-   if (APPLE)
-      set_target_properties (mongoc_shared PROPERTIES LINK_FLAGS "-Wl,-unexported_symbols_list,\"${CMAKE_CURRENT_SOURCE_DIR}/../../build/cmake/libmongoc-hidden-symbols.txt\"")
-   elseif (UNIX)
-      set_target_properties (mongoc_shared PROPERTIES LINK_FLAGS "-Wl,--version-script=\"${CMAKE_CURRENT_SOURCE_DIR}/../../build/cmake/libmongoc-hidden-symbols.map\"")
+if (NOT MONGOC_ENABLE_EXECUTABLES STREQUAL OFF)
+   add_library (mongoc_shared SHARED ${SOURCES} ${HEADERS} ${HEADERS_FORWARDING})
+   set_target_properties (mongoc_shared PROPERTIES CMAKE_CXX_VISIBILITY_PRESET hidden)
+   target_link_libraries (mongoc_shared PRIVATE ${LIBRARIES} PUBLIC ${BSON_LIBRARIES})
+   target_include_directories (mongoc_shared BEFORE PUBLIC ${MONGOC_INTERNAL_INCLUDE_DIRS})
+   target_include_directories (mongoc_shared PRIVATE ${ZLIB_INCLUDE_DIRS})
+   target_include_directories (mongoc_shared PRIVATE ${LIBMONGOCRYPT_INCLUDE_DIRECTORIES})
+   if (MONGOC_ENABLE_MONGODB_AWS_AUTH)
+      target_include_directories (mongoc_shared PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../kms-message/src")
+      if (APPLE)
+         set_target_properties (mongoc_shared PROPERTIES LINK_FLAGS "-Wl,-unexported_symbols_list,\"${CMAKE_CURRENT_SOURCE_DIR}/../../build/cmake/libmongoc-hidden-symbols.txt\"")
+      elseif (UNIX)
+         set_target_properties (mongoc_shared PROPERTIES LINK_FLAGS "-Wl,--version-script=\"${CMAKE_CURRENT_SOURCE_DIR}/../../build/cmake/libmongoc-hidden-symbols.map\"")
+      endif ()
+
    endif ()
+   target_compile_definitions (mongoc_shared
+      PRIVATE
+         MONGOC_COMPILATION
+         ${KMS_MSG_DEFINITIONS}
+         COMMON_PREFIX_=_mongoc_common
+   )
+   # Several directories in the source and build trees contain headers we would like
+   # include via relative reference, but they all end up in the same install path
+   target_include_directories (
+      mongoc_shared
+      PUBLIC
+         $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/src>
+         $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/src/mongoc>
+         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
+         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/mongoc>
+         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/../../src/common>
+         $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/../../src>
+         $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/../../src/common>
+   )
 
+   set_target_properties (mongoc_shared PROPERTIES VERSION 0.0.0 SOVERSION 0)
+   set_target_properties (mongoc_shared PROPERTIES OUTPUT_NAME "${MONGOC_OUTPUT_BASENAME}-${MONGOC_API_VERSION}")
 endif ()
-target_compile_definitions (mongoc_shared
-   PRIVATE
-      MONGOC_COMPILATION
-      ${KMS_MSG_DEFINITIONS}
-      COMMON_PREFIX_=_mongoc_common
-)
-# Several directories in the source and build trees contain headers we would like
-# include via relative reference, but they all end up in the same install path
-target_include_directories (
-   mongoc_shared
-   PUBLIC
-      $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/src>
-      $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/src/mongoc>
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/mongoc>
-      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/../../src/common>
-      $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/../../src>
-      $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/../../src/common>
-)
-
-set_target_properties (mongoc_shared PROPERTIES VERSION 0.0.0 SOVERSION 0)
-set_target_properties (mongoc_shared PROPERTIES OUTPUT_NAME "${MONGOC_OUTPUT_BASENAME}-${MONGOC_API_VERSION}")
 
 if (MONGOC_ENABLE_STATIC_BUILD)
    add_library (mongoc_static STATIC ${SOURCES} ${HEADERS} ${HEADERS_FORWARDING})
@@ -856,8 +858,10 @@ if (ENABLE_APPLE_FRAMEWORK)
    )
 endif ()
 
-add_executable (mongoc-stat ${PROJECT_SOURCE_DIR}/../../src/tools/mongoc-stat.c)
-target_link_libraries (mongoc-stat mongoc_shared ${LIBRARIES})
+if (NOT MONGOC_ENABLE_EXECUTABLES STREQUAL OFF)
+   add_executable (mongoc-stat ${PROJECT_SOURCE_DIR}/../../src/tools/mongoc-stat.c)
+   target_link_libraries (mongoc-stat mongoc_shared ${LIBRARIES})
+endif ()
 
 # mongoc-stat works if shared memory performance counters are enabled.
 if (ENABLE_SHM_COUNTERS STREQUAL "ON")
@@ -1136,10 +1140,14 @@ file (COPY ${PROJECT_SOURCE_DIR}/tests/json DESTINATION ${PROJECT_BINARY_DIR}/te
 file (COPY ${PROJECT_SOURCE_DIR}/tests/x509gen DESTINATION ${PROJECT_BINARY_DIR}/tests)
 file (COPY ${PROJECT_SOURCE_DIR}/tests/release_files DESTINATION ${PROJECT_BINARY_DIR}/tests)
 
+set (TARGETS_TO_INSTALL )
+
+if (NOT MONGOC_ENABLE_EXECUTABLES STREQUAL OFF)
+   list (APPEND TARGETS_TO_INSTALL mongoc_shared) 
+endif ()
+
 if (MONGOC_ENABLE_STATIC_INSTALL)
-   set (TARGETS_TO_INSTALL mongoc_shared mongoc_static)
-else ()
-   set (TARGETS_TO_INSTALL mongoc_shared)
+   list (APPEND TARGETS_TO_INSTALL mongoc_static) 
 endif ()
 
 set (MONGOC_HEADER_INSTALL_DIR
