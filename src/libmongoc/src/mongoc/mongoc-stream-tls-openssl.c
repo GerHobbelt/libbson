@@ -739,7 +739,7 @@ create_stream_with_ctx (
       if (inet_pton (AF_INET, host, &addr) || inet_pton (AF_INET6, host, &addr6)) {
          X509_VERIFY_PARAM_set1_ip_asc (param, host);
       } else {
-         X509_VERIFY_PARAM_set1_host (param, host, 0);
+         X509_VERIFY_PARAM_set1_host (param, host, strlen(host));
       }
       SSL_set1_param (ssl, param);
       X509_VERIFY_PARAM_free (param);
