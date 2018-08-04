@@ -652,14 +652,16 @@ if (WIN32)
    set (LIBRARIES ${LIBRARIES} ws2_32)
 endif ()
 
-add_library (mongoc_shared SHARED ${SOURCES} ${HEADERS} ${HEADERS_FORWARDING})
-set_target_properties (mongoc_shared PROPERTIES CMAKE_CXX_VISIBILITY_PRESET hidden)
-target_link_libraries (mongoc_shared ${LIBRARIES} ${BSON_LIBRARIES})
-target_include_directories (mongoc_shared BEFORE PUBLIC ${BSON_INCLUDE_DIRS} ${MONGOC_INTERNAL_INCLUDE_DIRS})
-target_compile_definitions (mongoc_shared PUBLIC MONGOC_COMPILATION ${BSON_DEFINITIONS})
+if (NOT MONGOC_ENABLE_EXECUTABLES STREQUAL OFF)
+   add_library (mongoc_shared SHARED ${SOURCES} ${HEADERS} ${HEADERS_FORWARDING})
+   set_target_properties (mongoc_shared PROPERTIES CMAKE_CXX_VISIBILITY_PRESET hidden)
+   target_link_libraries (mongoc_shared ${LIBRARIES} ${BSON_LIBRARIES})
+   target_include_directories (mongoc_shared BEFORE PUBLIC ${BSON_INCLUDE_DIRS} ${MONGOC_INTERNAL_INCLUDE_DIRS})
+   target_compile_definitions (mongoc_shared PUBLIC MONGOC_COMPILATION ${BSON_DEFINITIONS})
 
-set_target_properties (mongoc_shared PROPERTIES VERSION 0.0.0 SOVERSION 0)
-set_target_properties (mongoc_shared PROPERTIES OUTPUT_NAME "mongoc-${MONGOC_API_VERSION}" PREFIX "lib")
+   set_target_properties (mongoc_shared PROPERTIES VERSION 0.0.0 SOVERSION 0)
+   set_target_properties (mongoc_shared PROPERTIES OUTPUT_NAME "mongoc-${MONGOC_API_VERSION}" PREFIX "lib")
+endif ()
 
 if (MONGOC_ENABLE_STATIC)
    add_library (mongoc_static STATIC ${SOURCES} ${HEADERS} ${HEADERS_FORWARDING})
@@ -681,8 +683,10 @@ if (ENABLE_APPLE_FRAMEWORK)
    )
 endif ()
 
-add_executable (mongoc-stat ${PROJECT_SOURCE_DIR}/../../src/tools/mongoc-stat.c)
-target_link_libraries (mongoc-stat mongoc_shared)
+if (NOT MONGOC_ENABLE_EXECUTABLES STREQUAL OFF)
+   add_executable (mongoc-stat ${PROJECT_SOURCE_DIR}/../../src/tools/mongoc-stat.c)
+   target_link_libraries (mongoc-stat mongoc_shared)
+endif ()
 
 # mongoc-stat works if shared memory performance counters are enabled.
 if (ENABLE_SHM_COUNTERS STREQUAL "ON")
@@ -917,17 +921,19 @@ file (COPY ${PROJECT_SOURCE_DIR}/tests/json DESTINATION ${PROJECT_BINARY_DIR}/te
 file (COPY ${PROJECT_SOURCE_DIR}/tests/x509gen DESTINATION ${PROJECT_BINARY_DIR}/tests)
 file (COPY ${PROJECT_SOURCE_DIR}/tests/release_files DESTINATION ${PROJECT_BINARY_DIR}/tests)
 
-install (
-   TARGETS mongoc_shared ${EXAMPLES}
-   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-   FRAMEWORK DESTINATION ${CMAKE_INSTALL_BINDIR} 
-)
+if (NOT MONGOC_ENABLE_EXECUTABLES STREQUAL OFF)
+   install (
+      TARGETS mongoc_shared ${EXAMPLES}
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+      FRAMEWORK DESTINATION ${CMAKE_INSTALL_BINDIR} 
+   )
+endif ()
 
 if (MONGOC_ENABLE_STATIC)
    install (
-      TARGETS mongoc_shared mongoc_static ${EXAMPLES}
+      TARGETS mongoc_static ${EXAMPLES}
       LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
       ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
