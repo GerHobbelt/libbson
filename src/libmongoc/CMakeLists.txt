@@ -985,10 +985,12 @@ if (MONGOC_ENABLE_CLIENT_SIDE_ENCRYPTION)
    mongoc_add_example (client-side-encryption-auto-decryption TRUE ${PROJECT_SOURCE_DIR}/examples/client-side-encryption-auto-decryption.c ${PROJECT_SOURCE_DIR}/examples/client-side-encryption-helpers.c)
 endif ()
 
-file (COPY ${PROJECT_SOURCE_DIR}/tests/binary DESTINATION ${PROJECT_BINARY_DIR}/tests)
-file (COPY ${PROJECT_SOURCE_DIR}/tests/json DESTINATION ${PROJECT_BINARY_DIR}/tests)
-file (COPY ${PROJECT_SOURCE_DIR}/tests/x509gen DESTINATION ${PROJECT_BINARY_DIR}/tests)
-file (COPY ${PROJECT_SOURCE_DIR}/tests/release_files DESTINATION ${PROJECT_BINARY_DIR}/tests)
+if (ENABLE_TESTS)
+   file (COPY ${PROJECT_SOURCE_DIR}/tests/binary DESTINATION ${PROJECT_BINARY_DIR}/tests)
+   file (COPY ${PROJECT_SOURCE_DIR}/tests/json DESTINATION ${PROJECT_BINARY_DIR}/tests)
+   file (COPY ${PROJECT_SOURCE_DIR}/tests/x509gen DESTINATION ${PROJECT_BINARY_DIR}/tests)
+   file (COPY ${PROJECT_SOURCE_DIR}/tests/release_files DESTINATION ${PROJECT_BINARY_DIR}/tests)
+endif ()
 
 if (NOT MONGOC_ENABLE_EXECUTABLES STREQUAL OFF)
    if (MONGOC_ENABLE_STATIC)
@@ -1170,9 +1172,13 @@ endif ()
 
 add_subdirectory (build)
 # sub-directory 'doc' was already included above
-add_subdirectory (examples)
+if (ENABLE_EXAMPLES)
+   add_subdirectory (examples)
+endif ()
 add_subdirectory (src)
-add_subdirectory (tests)
+if (ENABLE_TESTS)
+   add_subdirectory (tests)
+endif ()
 
 set_local_dist (src_libmongoc_DIST_local
    CMakeLists.txt
