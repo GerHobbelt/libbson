@@ -472,10 +472,14 @@ endif ()
 
 add_subdirectory (build)
 # sub-directory 'doc' was already included above
-add_subdirectory (examples)
+if (ENABLE_EXAMPLES)
+   add_subdirectory (examples)
+endif ()
 add_subdirectory (fuzz)
 add_subdirectory (src)
-add_subdirectory (tests)
+if (ENABLE_TESTS)
+   add_subdirectory (tests)
+endif ()
 
 set_local_dist (src_libbson_DIST_local
    CMakeLists.txt
