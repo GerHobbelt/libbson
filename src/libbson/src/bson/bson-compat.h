@@ -56,6 +56,7 @@
 #endif
 #include <direct.h>
 #include <io.h>
+#include <inttypes.h>
 #endif
 
 
