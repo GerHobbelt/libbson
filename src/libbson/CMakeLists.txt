@@ -213,46 +213,49 @@ set (HEADERS_FORWARDING
    ${PROJECT_SOURCE_DIR}/src/bson/forwarding/bson.h
 )
 
-add_library (bson_shared SHARED ${SOURCES} ${HEADERS} ${HEADERS_FORWARDING})
-set (CMAKE_CXX_VISIBILITY_PRESET hidden)
-set_target_properties (bson_shared PROPERTIES COMPILE_DEFINITIONS "BSON_COMPILATION;JSONSL_PARSE_NAN")
-set_target_properties (bson_shared PROPERTIES VERSION 0.0.0 SOVERSION 0)
-set_target_properties (bson_shared PROPERTIES OUTPUT_NAME "bson-${BSON_API_VERSION}" PREFIX "lib")
-
-if (ENABLE_APPLE_FRAMEWORK)
-   set_target_properties(bson_shared PROPERTIES 
-      FRAMEWORK TRUE 
-      MACOSX_FRAMEWORK_BUNDLE_VERSION ${MONGOC_VERSION} 
-      MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${MONGOC_VERSION}
-      MACOSX_FRAMEWORK_IDENTIFIER org.mongodb.bson
-      OUTPUT_NAME "bson"
-      PUBLIC_HEADER "${HEADERS}" 
-   )
-endif ()
-
-if (RT_LIBRARY)
-   target_link_libraries (bson_shared ${RT_LIBRARY})
-endif ()
-
-find_library (M_LIBRARY m)
-if (M_LIBRARY)
-   target_link_libraries (bson_shared ${M_LIBRARY})
-   set (BSON_LIBRARIES ${BSON_LIBRARIES} ${M_LIBRARY})
-endif ()
-
-set (THREADS_PREFER_PTHREAD_FLAG 1)
 find_package (Threads REQUIRED)
-target_link_libraries (bson_shared Threads::Threads)
-if (CMAKE_USE_PTHREADS_INIT)
-   set (BSON_LIBRARIES ${BSON_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
-endif ()
 
-if (WIN32)
-   # gethostbyname
-   target_link_libraries (bson_shared ws2_32)
-   # Can't find_library () system dependencies
-   # must be handled specially since we can't resolve them
-   set (BSON_SYSTEM_LIBRARIES ${BSON_SYSTEM_LIBRARIES} ws2_32)
+if (NOT MONGOC_ENABLE_EXECUTABLES STREQUAL OFF)
+   add_library (bson_shared SHARED ${SOURCES} ${HEADERS} ${HEADERS_FORWARDING})
+   set (CMAKE_CXX_VISIBILITY_PRESET hidden)
+   set_target_properties (bson_shared PROPERTIES COMPILE_DEFINITIONS "BSON_COMPILATION;JSONSL_PARSE_NAN")
+   set_target_properties (bson_shared PROPERTIES VERSION 0.0.0 SOVERSION 0)
+   set_target_properties (bson_shared PROPERTIES OUTPUT_NAME "bson-${BSON_API_VERSION}" PREFIX "lib")
+
+   if (ENABLE_APPLE_FRAMEWORK)
+      set_target_properties(bson_shared PROPERTIES
+         FRAMEWORK TRUE
+         MACOSX_FRAMEWORK_BUNDLE_VERSION ${MONGOC_VERSION}
+         MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${MONGOC_VERSION}
+         MACOSX_FRAMEWORK_IDENTIFIER org.mongodb.bson
+         OUTPUT_NAME "bson"
+         PUBLIC_HEADER "${HEADERS}"
+      )
+   endif ()
+
+   if (RT_LIBRARY)
+      target_link_libraries (bson_shared ${RT_LIBRARY})
+   endif ()
+
+   find_library (M_LIBRARY m)
+   if (M_LIBRARY)
+      target_link_libraries (bson_shared ${M_LIBRARY})
+      set (BSON_LIBRARIES ${BSON_LIBRARIES} ${M_LIBRARY})
+   endif ()
+
+   set (THREADS_PREFER_PTHREAD_FLAG 1)
+   target_link_libraries (bson_shared Threads::Threads)
+   if (CMAKE_USE_PTHREADS_INIT)
+      set (BSON_LIBRARIES ${BSON_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+   endif ()
+
+   if (WIN32)
+      # gethostbyname
+      target_link_libraries (bson_shared ws2_32)
+      # Can't find_library () system dependencies
+      # must be handled specially since we can't resolve them
+      set (BSON_SYSTEM_LIBRARIES ${BSON_SYSTEM_LIBRARIES} ws2_32)
+   endif ()
 endif ()
 
 if (ENABLE_STATIC MATCHES "ON|AUTO")
@@ -301,20 +304,23 @@ set (BSON_HEADER_INSTALL_DIR
    "${CMAKE_INSTALL_INCLUDEDIR}/libbson-${BSON_API_VERSION}"
 )
 
-install (
-   TARGETS bson_shared ${EXAMPLES}
-   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-   FRAMEWORK DESTINATION ${CMAKE_INSTALL_BINDIR} 
-)
+if (NOT MONGOC_ENABLE_EXECUTABLES STREQUAL OFF)
+   install (
+      TARGETS bson_shared ${EXAMPLES}
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+      FRAMEWORK DESTINATION ${CMAKE_INSTALL_BINDIR}
+   )
+endif ()
+
 if (ENABLE_STATIC MATCHES "ON|AUTO")
    install (
       TARGETS bson_static ${EXAMPLES}
       LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
       ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-      FRAMEWORK DESTINATION ${CMAKE_INSTALL_BINDIR} 
+      FRAMEWORK DESTINATION ${CMAKE_INSTALL_BINDIR}
    )
 endif ()
 install (
