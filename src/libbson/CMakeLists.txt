@@ -205,6 +205,7 @@ set (HEADERS_FORWARDING
    ${PROJECT_SOURCE_DIR}/src/bson/forwarding/bson.h
 )
 
+if (NOT MONGOC_ENABLE_EXECUTABLES STREQUAL OFF)
 add_library (bson_shared SHARED ${SOURCES} ${HEADERS} ${HEADERS_FORWARDING})
 if (MSVC AND MSVC_VERSION VERSION_LESS 1900)
    message (STATUS "Disabling warning C4756 for VS 2013 and older")
@@ -281,6 +282,7 @@ if (WIN32)
    # Can't find_library () system dependencies
    # must be handled specially since we can't resolve them
    set (BSON_SYSTEM_LIBRARIES ${BSON_SYSTEM_LIBRARIES} ws2_32)
+endif ()
 endif ()
 
 if (MONGOC_ENABLE_STATIC_BUILD)
@@ -366,11 +368,16 @@ set (BSON_HEADER_INSTALL_DIR
    "${CMAKE_INSTALL_INCLUDEDIR}/libbson-${BSON_API_VERSION}"
 )
 
-if (MONGOC_ENABLE_STATIC_INSTALL)
-   set (TARGETS_TO_INSTALL bson_shared bson_static)
-else ()
-   set (TARGETS_TO_INSTALL bson_shared)
+set (TARGETS_TO_INSTALL )
+
+if (NOT MONGOC_ENABLE_EXECUTABLES STREQUAL OFF)
+   list ( APPEND TARGETS_TO_INSTALL bson_shared)
 endif ()
+
+if (MONGOC_ENABLE_STATIC_INSTALL)
+   list ( APPEND TARGETS_TO_INSTALL bson_static)
+endif ()
+
 install (
    TARGETS ${TARGETS_TO_INSTALL} ${EXAMPLES}
    EXPORT bson-targets
