@@ -226,6 +226,7 @@ set (HEADERS_FORWARDING
    ${PROJECT_SOURCE_DIR}/src/bson/forwarding/bson.h
 )
 
+if (NOT MONGOC_ENABLE_EXECUTABLES STREQUAL OFF)
 add_library (bson_shared SHARED ${SOURCES} ${HEADERS} ${HEADERS_FORWARDING})
 set (CMAKE_CXX_VISIBILITY_PRESET hidden)
 target_compile_definitions (bson_shared PRIVATE BSON_COMPILATION JSONSL_PARSE_NAN)
@@ -267,6 +268,7 @@ if (WIN32)
    # Can't find_library () system dependencies
    # must be handled specially since we can't resolve them
    set (BSON_SYSTEM_LIBRARIES ${BSON_SYSTEM_LIBRARIES} ws2_32)
+endif ()
 endif ()
 
 if (ENABLE_STATIC MATCHES "ON|AUTO")
@@ -321,11 +323,18 @@ set (BSON_HEADER_INSTALL_DIR
    "${CMAKE_INSTALL_INCLUDEDIR}/libbson-${BSON_API_VERSION}"
 )
 
-if (ENABLE_STATIC MATCHES "ON|AUTO")
-   set (TARGETS_TO_INSTALL bson_shared bson_static)
+if (NOT MONGOC_ENABLE_EXECUTABLES STREQUAL OFF)
+   if (ENABLE_STATIC MATCHES "ON|AUTO")
+      set (TARGETS_TO_INSTALL bson_shared bson_static)
+   else ()
+      set (TARGETS_TO_INSTALL bson_shared)
+   endif ()
 else ()
-   set (TARGETS_TO_INSTALL bson_shared)
+   if (ENABLE_STATIC MATCHES "ON|AUTO")
+      set (TARGETS_TO_INSTALL bson_static)
+   endif ()
 endif ()
+
 install (
    TARGETS ${TARGETS_TO_INSTALL} ${EXAMPLES}
    EXPORT bson-targets
@@ -337,6 +346,7 @@ install (
 )
 
 if (MSVC)
+   if (NOT MONGOC_ENABLE_EXECUTABLES STREQUAL OFF)
    add_custom_command (
       TARGET bson_shared
       POST_BUILD
@@ -348,6 +358,7 @@ if (MSVC)
       FILES $<TARGET_LINKER_FILE_DIR:bson_shared>/lib$<TARGET_LINKER_FILE_NAME:bson_shared>
       DESTINATION ${CMAKE_INSTALL_LIBDIR}
    )
+   endif ()
    if (TARGET bson_static)
       add_custom_command (
          TARGET bson_static
