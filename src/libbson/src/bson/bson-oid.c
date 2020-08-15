@@ -32,6 +32,9 @@
  * to hex formatted ASCII. Performing two characters at a time roughly
  * reduces the number of operations by one-half.
  */
+#if !defined(__i386__) && !defined(__x86_64__) && !defined(_M_IX86) && \
+   !defined(_M_X64)
+#else
 static const uint16_t gHexCharPairs[] = {
 #if BSON_BYTE_ORDER == BSON_BIG_ENDIAN
    12336, 12337, 12338, 12339, 12340, 12341, 12342, 12343, 12344, 12345, 12385,
@@ -85,6 +88,7 @@ static const uint16_t gHexCharPairs[] = {
    25702, 25958, 26214
 #endif
 };
+#endif
 
 
 void
