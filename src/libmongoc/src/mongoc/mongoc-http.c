@@ -72,7 +72,7 @@ _mongoc_http_send (mongoc_http_request_t *req,
       goto fail;
    }
 
-   stream = mongoc_client_connect_tcp (timeout_ms, &host_list, error);
+   stream = mongoc_client_connect_tcp (timeout_ms, &host_list, error, 0);
    if (!stream) {
       bson_set_error (error,
                       MONGOC_ERROR_STREAM,

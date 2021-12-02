@@ -794,11 +794,11 @@ mongoc_client_connect (bool buffered,
                        void *ssl_opts_void,
                        const mongoc_uri_t *uri,
                        const mongoc_host_list_t *host,
-                       bson_error_t *error)
+                       bson_error_t *error,
+                       int abort_fd)
 {
    mongoc_stream_t *base_stream = NULL;
    int32_t connecttimeoutms;
-   mongoc_client_t *client = (mongoc_client_t *) user_data;
    BSON_ASSERT (uri);
    BSON_ASSERT (host);
 
@@ -821,10 +821,10 @@ mongoc_client_connect (bool buffered,
    case AF_INET6:
 #endif
    case AF_INET:
-      base_stream = mongoc_client_connect_tcp (connecttimeoutms, host, error, client->abort_fd);
+      base_stream = mongoc_client_connect_tcp (connecttimeoutms, host, error, abort_fd);
       break;
    case AF_UNIX:
-      base_stream = mongoc_client_connect_unix (host, error, client->abort_fd);
+      base_stream = mongoc_client_connect_unix (host, error, abort_fd);
       break;
    default:
       bson_set_error (error,
@@ -904,16 +904,15 @@ mongoc_client_default_stream_initiator (const mongoc_uri_t *uri,
 {
    void *ssl_opts_void = NULL;
    bool use_ssl = false;
-#ifdef MONGOC_ENABLE_SSL
    mongoc_client_t *client = (mongoc_client_t *) user_data;
 
+#ifdef MONGOC_ENABLE_SSL
    use_ssl = client->use_ssl;
    ssl_opts_void = (void *) &client->ssl_opts;
-
 #endif
 
    return mongoc_client_connect (
-      true, use_ssl, ssl_opts_void, uri, host, error);
+      true, use_ssl, ssl_opts_void, uri, host, error, client->abort_fd);
 }
 
 /*
