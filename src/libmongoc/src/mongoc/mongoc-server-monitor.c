@@ -858,7 +858,8 @@ _server_monitor_setup_connection (mongoc_server_monitor_t *server_monitor,
                                 ssl_opts_void,
                                 server_monitor->uri,
                                 &server_monitor->description->host,
-                                error);
+                                error,
+                                0);
    }
 
    if (!server_monitor->stream) {
