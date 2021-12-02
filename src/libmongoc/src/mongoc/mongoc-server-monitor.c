@@ -891,7 +891,8 @@ _server_monitor_setup_connection (mongoc_server_monitor_t *server_monitor,
                                                       server_monitor->uri,
                                                       &server_monitor->description->host,
                                                       openssl_ctx_void,
-                                                      error);
+                                                      error,
+                                                      0);
    }
 
    if (!server_monitor->stream) {
