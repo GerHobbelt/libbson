@@ -130,7 +130,7 @@ _mongoc_http_send (const mongoc_http_request_t *req,
       // +1 to prevent passing zero as a timeout
       _mongoc_http_msec_remaining (timer) + 1,
       &host_list,
-      error);
+      error, 0);
    if (!stream) {
       bson_set_error (error,
                       MONGOC_ERROR_STREAM,

@@ -23,7 +23,9 @@
 #include <openssl/bio.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#ifdef MONGOC_ENABLE_OCSP_OPENSSL
 #include <openssl/ocsp.h>
+#endif
 #include <openssl/x509v3.h>
 #include <openssl/crypto.h>
 
@@ -212,9 +214,11 @@ _mongoc_openssl_check_peer_hostname (SSL *ssl,
       return true;
    }
 
+   int host_len = strlen(host);
+
    peer = SSL_get_peer_certificate (ssl);
-   if (peer && (X509_check_host (peer, host, 0, 0, NULL) == 1 ||
-                X509_check_ip_asc (peer, host, 0) == 1)) {
+   if (peer && (X509_check_host (peer, host, host_len, 0, NULL) == 1 ||
+                X509_check_ip_asc (peer, host, host_len) == 1)) {
       X509_free (peer);
       return true;
    }
