@@ -113,6 +113,9 @@ mongoc_client_pool_new (const mongoc_uri_t *uri)
    return pool;
 }
 
+#ifndef _WIN32
+void alloc_abort_fd(int *abort_fd, int *abort_write_fd);
+#endif
 
 mongoc_client_pool_t *
 mongoc_client_pool_new_with_error (const mongoc_uri_t *uri, bson_error_t *error)
@@ -139,7 +142,13 @@ mongoc_client_pool_new_with_error (const mongoc_uri_t *uri, bson_error_t *error)
    }
 #endif
 
-   topology = mongoc_topology_new (uri, false);
+   int abort_fd = -1;
+   int abort_write_fd = -1;
+#ifndef _WIN32
+   alloc_abort_fd(&abort_fd, &abort_write_fd);
+#endif
+
+   topology = mongoc_topology_new (uri, false, abort_fd);
 
    if (!topology->valid) {
       if (error) {
@@ -147,6 +156,13 @@ mongoc_client_pool_new_with_error (const mongoc_uri_t *uri, bson_error_t *error)
       }
 
       mongoc_topology_destroy (topology);
+
+#ifndef _WIN32
+      if (abort_fd >= 0)
+         close(abort_fd);
+      if (abort_write_fd >= 0)
+         close(abort_write_fd);
+#endif
 
       RETURN (NULL);
    }

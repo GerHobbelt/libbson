@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+#ifdef __linux__
+   #define _GNU_SOURCE
+#endif
+
 #include <bson/bson.h>
 #include "mongoc-config.h"
 #ifdef MONGOC_HAVE_DNSAPI
@@ -970,7 +974,7 @@ _mongoc_client_recv (mongoc_client_t *client,
 }
 
 #ifndef _WIN32
-static void alloc_abort_fd(int *abort_fd, int *abort_write_fd) {
+void alloc_abort_fd(int *abort_fd, int *abort_write_fd) {
    int Pipes[2];
 #ifdef __linux__
    if (pipe2(Pipes, O_CLOEXEC | O_NONBLOCK))
@@ -1115,7 +1119,13 @@ mongoc_client_new_from_uri_with_error (const mongoc_uri_t *uri,
    }
 #endif
 
-   topology = mongoc_topology_new (uri, true);
+   int abort_fd = -1;
+   int abort_write_fd = -1;
+#ifndef _WIN32
+   alloc_abort_fd(&abort_fd, &abort_write_fd);
+#endif
+
+   topology = mongoc_topology_new (uri, true, abort_fd);
 
    if (!topology->valid) {
       if (error) {
@@ -1124,14 +1134,15 @@ mongoc_client_new_from_uri_with_error (const mongoc_uri_t *uri,
 
       mongoc_topology_destroy (topology);
 
+#ifndef _WIN32
+      if (abort_fd >= 0)
+         close(abort_fd);
+      if (abort_write_fd >= 0)
+         close(abort_write_fd);
+#endif
+
       RETURN (NULL);
    }
-
-   int abort_fd = -1;
-   int abort_write_fd = -1;
-#ifndef _WIN32
-   alloc_abort_fd(&abort_fd, &abort_write_fd);
-#endif
 
    client = _mongoc_client_new_from_topology (topology, abort_fd, abort_write_fd);
    BSON_ASSERT (client);
