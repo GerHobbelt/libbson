@@ -79,7 +79,7 @@ _mongoc_interrupt_new (uint32_t timeout_ms)
    bson_mutex_init (&interrupt->mutex);
 
    /* Inspired by cpython's implementation of socketpair. */
-   listen_socket = mongoc_socket_new (AF_INET, SOCK_STREAM, 0);
+   listen_socket = mongoc_socket_new (AF_INET, SOCK_STREAM, 0, -1);
    if (!listen_socket) {
       MONGOC_ERROR ("socket creation failed");
       GOTO (fail);
@@ -111,7 +111,7 @@ _mongoc_interrupt_new (uint32_t timeout_ms)
    }
 
    interrupt->impl.socket_pair.read =
-      mongoc_socket_new (server_addr.ss_family, SOCK_STREAM, 0);
+      mongoc_socket_new (server_addr.ss_family, SOCK_STREAM, 0, -1);
    if (!interrupt->impl.socket_pair.read) {
       MONGOC_ERROR ("socket creation failed");
       GOTO (fail);
