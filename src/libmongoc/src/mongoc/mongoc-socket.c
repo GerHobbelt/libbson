@@ -1339,7 +1339,7 @@ _mongoc_socket_try_sendv (mongoc_socket_t *sock, /* IN */
 #else
                   0);
 #endif
-   TRACE ("Send %ld out of %ld bytes", ret, iov->iov_len);
+   TRACE ("Send %zd out of %zu bytes", ret, iov->iov_len);
 #endif
 
 

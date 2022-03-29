@@ -198,7 +198,6 @@ int
 mongoc_stream_tls_openssl_bio_read (BIO *b, char *buf, int len)
 {
    mongoc_stream_tls_t *tls;
-   mongoc_stream_tls_openssl_t *openssl;
 
    BSON_ASSERT (b);
    BSON_ASSERT (buf);
@@ -221,8 +220,6 @@ mongoc_stream_tls_openssl_bio_read (BIO *b, char *buf, int len)
                     tls->timeout_msec);
       return -1;
    }
-
-   openssl = (mongoc_stream_tls_openssl_t *) tls->ctx;
 
    errno = 0;
    const ssize_t ret = mongoc_stream_read (
@@ -255,7 +252,6 @@ int
 mongoc_stream_tls_openssl_bio_write (BIO *b, const char *buf, int len)
 {
    mongoc_stream_tls_t *tls;
-   mongoc_stream_tls_openssl_t *openssl;
    mongoc_iovec_t iov;
    ENTRY;
 
@@ -271,8 +267,6 @@ mongoc_stream_tls_openssl_bio_write (BIO *b, const char *buf, int len)
    if (len < 0) {
       RETURN (-1);
    }
-
-   openssl = (mongoc_stream_tls_openssl_t *) tls->ctx;
 
    iov.iov_base = (void *) buf;
    iov.iov_len = (size_t) len;

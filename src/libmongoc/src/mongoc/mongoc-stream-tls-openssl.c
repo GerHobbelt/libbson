@@ -336,14 +336,14 @@ _mongoc_stream_tls_openssl_writev (mongoc_stream_t *stream,
             child_ret =
                _mongoc_stream_tls_openssl_write (tls, to_write, to_write_len);
             if (bson_cmp_not_equal_su (child_ret, to_write_len)) {
-               TRACE ("Got child_ret: %ld while to_write_len is: %ld",
+               TRACE ("Got child_ret: %zd while to_write_len is: %zu",
                       child_ret,
                       to_write_len);
             }
 
             if (child_ret < 0) {
-               TRACE ("Returning what I had (%ld) as apposed to the error "
-                      "(%ld, errno:%d)",
+               TRACE ("Returning what I had (%zd) as apposed to the error "
+                      "(%zd, errno:%d)",
                       ret,
                       child_ret,
                       errno);
