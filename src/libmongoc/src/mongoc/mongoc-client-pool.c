@@ -144,6 +144,7 @@ mongoc_client_pool_new_with_error (const mongoc_uri_t *uri, bson_error_t *error)
 
    int abort_fd = -1;
    int abort_write_fd = -1;
+   (void)abort_write_fd;
 #ifndef _WIN32
    alloc_abort_fd(&abort_fd, &abort_write_fd);
 #endif

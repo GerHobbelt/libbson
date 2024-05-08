@@ -76,7 +76,7 @@ enum bson_memory_order {
 
 /* CDRIVER-4264 Contrary to documentation, VS 2013 targeting x86 does not
  * correctly/consistently provide _InterlockedPointerExchange. */
-#if defined(_MSC_VER) && _MSC_VER < 1900 && defined(_M_IX86)
+#if defined(_MSC_VER) && !defined(__clang__) && _MSC_VER < 1900 && defined(_M_IX86)
 #define BSON_EMULATE_PTR
 #endif
 
@@ -348,7 +348,7 @@ enum bson_memory_order {
 #define DECL_ATOMIC_STDINT(Name, VCSuffix) \
    DECL_ATOMIC_INTEGRAL (Name, Name##_t, VCSuffix)
 
-#if defined(_MSC_VER) || defined(BSON_USE_LEGACY_GCC_ATOMICS)
+#if defined(_MSC_VER) && !defined(__clang__) || defined(BSON_USE_LEGACY_GCC_ATOMICS)
 /* MSVC and GCC require built-in types (not typedefs) for their atomic
  * intrinsics. */
 #if defined(_MSC_VER)

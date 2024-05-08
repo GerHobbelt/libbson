@@ -196,7 +196,7 @@ typedef signed char bool;
 #endif
 
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 /** Expands the arguments if compiling with MSVC, otherwise empty */
 #define BSON_IF_MSVC(...) __VA_ARGS__
 /** Expands the arguments if compiling with GCC or Clang, otherwise empty */

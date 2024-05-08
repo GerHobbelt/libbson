@@ -317,7 +317,7 @@
 #endif
 
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 #define BSON_ENSURE_ARRAY_PARAM_SIZE(_n)
 #define BSON_TYPEOF decltype
 #else

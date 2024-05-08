@@ -159,6 +159,7 @@ _mongoc_socket_wait (mongoc_socket_t *sock, /* IN */
    int timeout;
    int64_t now;
    int fds = 1;
+   (void)fds;
 
    ENTRY;
 
