@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <getopt.h>
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -70,7 +71,7 @@ bson_streaming_remote_open (const char *hostname, const char *port)
                         &server_list);
 
    if (error) {
-      fprintf (stderr, "bson-streaming-remote-open: Failed to get server info: %s\n", gai_strerror (error));
+      fprintf (stderr, "bson-streaming-remote-open: Failed to get server info: %s\n", gai_strerrorA (error));
       return -1;
    }
 
@@ -108,6 +109,10 @@ bson_streaming_remote_open (const char *hostname, const char *port)
 }
 
 
+#if defined(BUILD_MONOLITHIC)
+#define main bson_streaming_reader_example_main
+#endif
+
 /*
  * main --
  *
@@ -119,7 +124,7 @@ bson_streaming_remote_open (const char *hostname, const char *port)
  *          -p PORT_NUM     Specify the port number to connect to on the server.
  */
 int
-main (int argc, char *argv[])
+main (int argc, const char **argv)
 {
    bson_reader_t *reader;
    char *hostname = NULL;
