@@ -17,6 +17,10 @@
 #include <stdio.h>
 #include <bson/bson.h>
 
+#if defined(BUILD_MONOLITHIC)
+#define main bson_hello_example_main
+#endif
+
 int
 main (int argc, const char **argv)
 {

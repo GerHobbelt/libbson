@@ -76,6 +76,10 @@ col_view_create (const char *stub, ...)
    return bson;
 }
 
+#if defined(BUILD_MONOLITHIC)
+#define main   bson_col_view_example_main
+#endif
+
 int
 main (void)
 {

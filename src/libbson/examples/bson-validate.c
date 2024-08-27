@@ -33,8 +33,12 @@
 #include <stdlib.h>
 
 
+#if defined(BUILD_MONOLITHIC)
+#define main bson_validate_example_main
+#endif
+
 int
-main (int argc, char *argv[])
+main (int argc, const char **argv)
 {
    bson_reader_t *reader;
    const bson_t *b;

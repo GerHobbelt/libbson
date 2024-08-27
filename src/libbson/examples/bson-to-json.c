@@ -28,8 +28,12 @@
 #define STDIN_FILENO 0
 #endif
 
+#if defined(BUILD_MONOLITHIC)
+#define main bson_to_json_example_main
+#endif
+
 int
-main (int argc, char *argv[])
+main (int argc, const char **argv)
 {
    bson_reader_t *reader;
    const bson_t *b;

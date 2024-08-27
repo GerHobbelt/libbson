@@ -31,9 +31,12 @@
  * time ./bcon-speed 100000 n
  */
 
+#if defined(BUILD_MONOLITHIC)
+#define main bson_speed_example_main
+#endif
 
 int
-main (int argc, char *argv[])
+main (int argc, const char **argv)
 {
    int i;
    int n;

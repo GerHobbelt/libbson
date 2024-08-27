@@ -210,8 +210,12 @@ bson_metrics (const bson_t *bson, size_t *length, void *data)
    }
 }
 
+#if defined(BUILD_MONOLITHIC)
+#define main bson_metrics_example_main
+#endif
+
 int
-main (int argc, char *argv[])
+main (int argc, const char **argv)
 {
    bson_reader_t *reader;
    const bson_t *b;

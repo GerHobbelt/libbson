@@ -91,8 +91,12 @@ check_depth (const bson_t *bson, uint32_t max_depth)
    }
 }
 
+#if defined(BUILD_MONOLITHIC)
+#define main bson_check_depth_example_main
+#endif
+
 int
-main (int argc, char **argv)
+main (int argc, const char **argv)
 {
    bson_reader_t *bson_reader;
    const bson_t *bson;

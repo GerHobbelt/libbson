@@ -16,6 +16,10 @@
 #include <stdio.h>
 #include <bson/bson.h>
 
+#if defined(BUILD_MONOLITHIC)
+#define main bson_creating_example_main
+#endif
+
 int
 main (void)
 {
