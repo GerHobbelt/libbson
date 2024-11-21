@@ -171,6 +171,9 @@ mongoc_topology_scanner_valid (mongoc_topology_scanner_t *ts);
 void
 mongoc_topology_scanner_abort (mongoc_topology_scanner_t *ts);
 
+int
+mongoc_topology_scanner_get_negotiated_curve (mongoc_topology_scanner_t *ts);
+
 void
 mongoc_topology_scanner_add (mongoc_topology_scanner_t *ts, const mongoc_host_list_t *host, uint32_t id, bool hello_ok);
 

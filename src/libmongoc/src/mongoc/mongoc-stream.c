@@ -405,6 +405,20 @@ mongoc_stream_should_retry (mongoc_stream_t *stream)
    RETURN (stream->should_retry && stream->should_retry (stream));
 }
 
+int
+mongoc_stream_get_negotiated_curve (mongoc_stream_t *stream)
+{
+   ENTRY;
+
+   BSON_ASSERT_PARAM (stream);
+
+   if (!stream->get_negotiated_curve)
+      RETURN (0);
+
+   /* for e.g. a file stream there is no should_retry function */
+   RETURN (stream->get_negotiated_curve (stream));
+}
+
 bool
 _mongoc_stream_writev_full (
    mongoc_stream_t *stream, mongoc_iovec_t *iov, size_t iovcnt, int64_t timeout_msec, bson_error_t *error)

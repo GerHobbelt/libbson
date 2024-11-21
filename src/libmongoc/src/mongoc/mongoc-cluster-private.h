@@ -82,6 +82,9 @@ mongoc_cluster_reset_sockettimeoutms (mongoc_cluster_t *cluster);
 void
 mongoc_cluster_abort (mongoc_cluster_t *cluster);
 
+int
+mongoc_cluster_get_negotiated_curve (mongoc_cluster_t *cluster);
+
 void
 mongoc_cluster_disconnect_node (mongoc_cluster_t *cluster, uint32_t id);
 

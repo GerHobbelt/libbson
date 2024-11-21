@@ -901,6 +901,16 @@ mongoc_topology_abort (mongoc_topology_t *topology)
    mongoc_topology_scanner_abort (topology->scanner);
 }
 
+int
+mongoc_topology_get_negotiated_curve (mongoc_topology_t *topology)
+{
+   if (!topology) {
+      return 0;
+   }
+
+   return mongoc_topology_scanner_get_negotiated_curve (topology->scanner);
+}
+
 /*
  *--------------------------------------------------------------------------
  *

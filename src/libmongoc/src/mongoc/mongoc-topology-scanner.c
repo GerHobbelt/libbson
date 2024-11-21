@@ -525,6 +525,20 @@ mongoc_topology_scanner_abort (mongoc_topology_scanner_t *ts)
    }
 }
 
+int
+mongoc_topology_scanner_get_negotiated_curve (mongoc_topology_scanner_t *ts)
+{
+   mongoc_topology_scanner_node_t *ele, *tmp;
+
+   DL_FOREACH_SAFE (ts->nodes, ele, tmp)
+   {
+      if (ele->stream && ele->stream->get_negotiated_curve)
+         return ele->stream->get_negotiated_curve(ele->stream);
+   }
+
+   return 0;
+}
+
 void
 mongoc_topology_scanner_add (mongoc_topology_scanner_t *ts, const mongoc_host_list_t *host, uint32_t id, bool hello_ok)
 {

@@ -251,6 +251,9 @@ mongoc_topology_reconcile (const mongoc_topology_t *topology, mongoc_topology_de
 void
 mongoc_topology_abort (mongoc_topology_t *topology);
 
+int
+mongoc_topology_get_negotiated_curve (mongoc_topology_t *topology);
+
 bool
 mongoc_topology_compatible (const mongoc_topology_description_t *td,
                             const mongoc_read_prefs_t *read_prefs,
