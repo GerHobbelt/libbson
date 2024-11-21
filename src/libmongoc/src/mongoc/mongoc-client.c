@@ -1253,6 +1253,18 @@ mongoc_client_abort (mongoc_client_t *client)
 }
 
 
+MONGOC_EXPORT (int)
+mongoc_client_get_negotiated_curve (mongoc_client_t *client)
+{
+   if (client) {
+      if (client->topology->single_threaded) {
+         return mongoc_topology_get_negotiated_curve (client->topology);
+      }
+      return mongoc_cluster_get_negotiated_curve (&client->cluster);
+   }
+   return 0;
+}
+
 void
 mongoc_client_set_sockettimeoutms (mongoc_client_t *client, int32_t timeoutms)
 {

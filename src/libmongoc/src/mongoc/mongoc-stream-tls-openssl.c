@@ -697,6 +697,17 @@ _mongoc_stream_tls_openssl_should_retry (mongoc_stream_t *stream)
    RETURN (mongoc_stream_should_retry (tls->base_stream));
 }
 
+static int
+_mongoc_stream_tls_openssl_get_negotiated_curve (mongoc_stream_t *stream)
+{
+   mongoc_stream_tls_t *tls = (mongoc_stream_tls_t *) stream;
+   mongoc_stream_tls_openssl_t *openssl = (mongoc_stream_tls_openssl_t *) tls->ctx;
+
+   ENTRY;
+
+   RETURN (SSL_get_negotiated_group(openssl->ssl));
+}
+
 /* Creates a new mongoc_stream_tls_openssl_t with ssl_ctx. */
 static mongoc_stream_t *
 create_stream_with_ctx (
@@ -816,6 +827,8 @@ create_stream_with_ctx (
    tls->parent.check_closed = _mongoc_stream_tls_openssl_check_closed;
    tls->parent.timed_out = _mongoc_stream_tls_openssl_timed_out;
    tls->parent.should_retry = _mongoc_stream_tls_openssl_should_retry;
+   tls->parent.get_negotiated_curve = _mongoc_stream_tls_openssl_get_negotiated_curve;
+
    memcpy (&tls->ssl_opts, opt, sizeof tls->ssl_opts);
    tls->handshake = _mongoc_stream_tls_openssl_handshake;
    tls->ctx = (void *) openssl;

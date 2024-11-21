@@ -50,6 +50,7 @@ struct _mongoc_stream_t {
    void (*failed) (mongoc_stream_t *stream);
    bool (*timed_out) (mongoc_stream_t *stream);
    bool (*should_retry) (mongoc_stream_t *stream);
+   int (*get_negotiated_curve) (mongoc_stream_t *stream);
    void *padding[3];
 };
 
@@ -83,6 +84,8 @@ MONGOC_EXPORT (bool)
 mongoc_stream_timed_out (mongoc_stream_t *stream);
 MONGOC_EXPORT (bool)
 mongoc_stream_should_retry (mongoc_stream_t *stream);
+MONGOC_EXPORT (int)
+mongoc_stream_get_negotiated_curve (mongoc_stream_t *stream);
 MONGOC_EXPORT (ssize_t)
 mongoc_stream_poll (mongoc_stream_poll_t *streams, size_t nstreams, int32_t timeout);
 

@@ -295,6 +295,11 @@ _mongoc_stream_socket_should_retry (mongoc_stream_t *stream) /* IN */
    RETURN (MONGOC_ERRNO_IS_AGAIN (ss->sock->errno_));
 }
 
+static int
+_mongoc_stream_socket_get_negotiated_curve (mongoc_stream_t *stream) /* IN */
+{
+   return 0;
+}
 
 /*
  *--------------------------------------------------------------------------
@@ -332,6 +337,7 @@ mongoc_stream_socket_new (mongoc_socket_t *sock) /* IN */
    stream->vtable.check_closed = _mongoc_stream_socket_check_closed;
    stream->vtable.timed_out = _mongoc_stream_socket_timed_out;
    stream->vtable.should_retry = _mongoc_stream_socket_should_retry;
+   stream->vtable.get_negotiated_curve = _mongoc_stream_socket_get_negotiated_curve;
    stream->vtable.poll = _mongoc_stream_socket_poll;
    stream->sock = sock;
 

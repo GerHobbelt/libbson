@@ -179,6 +179,8 @@ mongoc_client_start_session (mongoc_client_t *client,
                              bson_error_t *error) BSON_GNUC_WARN_UNUSED_RESULT;
 MONGOC_EXPORT (void)
 mongoc_client_abort (mongoc_client_t *client);
+MONGOC_EXPORT (int)
+mongoc_client_get_negotiated_curve (mongoc_client_t *client);
 MONGOC_EXPORT (mongoc_database_t *)
 mongoc_client_get_database (mongoc_client_t *client, const char *name) BSON_GNUC_WARN_UNUSED_RESULT;
 MONGOC_EXPORT (mongoc_database_t *)

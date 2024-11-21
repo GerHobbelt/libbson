@@ -290,6 +290,13 @@ _mongoc_stream_buffered_should_retry (mongoc_stream_t *stream) /* IN */
    return mongoc_stream_should_retry (buffered->base_stream);
 }
 
+static int
+_mongoc_stream_buffered_get_negotiated_curve (mongoc_stream_t *stream) /* IN */
+{
+   mongoc_stream_buffered_t *buffered = (mongoc_stream_buffered_t *) stream;
+   BSON_ASSERT (stream);
+   return mongoc_stream_get_negotiated_curve (buffered->base_stream);
+}
 
 /*
  *--------------------------------------------------------------------------
@@ -334,6 +341,7 @@ mongoc_stream_buffered_new (mongoc_stream_t *base_stream, /* IN */
    stream->stream.check_closed = _mongoc_stream_buffered_check_closed;
    stream->stream.timed_out = _mongoc_stream_buffered_timed_out;
    stream->stream.should_retry = _mongoc_stream_buffered_should_retry;
+   stream->stream.get_negotiated_curve = _mongoc_stream_buffered_get_negotiated_curve;
 
    stream->base_stream = base_stream;
 

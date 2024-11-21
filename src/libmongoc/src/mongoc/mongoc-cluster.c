@@ -2623,6 +2623,17 @@ _mongoc_cluster_abort_node(void *item, void *ctx)
    return true;
 }
 
+static bool
+_mongoc_cluster_abort_get_negotiated_curve(void *item, void *ctx)
+{
+   mongoc_cluster_node_t *node = (mongoc_cluster_node_t *) item;
+
+   if (node->stream && node->stream->get_negotiated_curve)
+      (*(int *)ctx) = node->stream->get_negotiated_curve(node->stream);
+
+   return true;
+}
+
 /*
  *--------------------------------------------------------------------------
  *
@@ -2653,6 +2664,21 @@ mongoc_cluster_abort (mongoc_cluster_t *cluster) /* INOUT */
    EXIT;
 }
 
+int
+mongoc_cluster_get_negotiated_curve (mongoc_cluster_t *cluster) /* INOUT */
+{
+   ENTRY;
+
+   BSON_ASSERT (cluster);
+
+   int curve = 0;
+
+   mongoc_set_for_each (cluster->nodes,
+                        _mongoc_cluster_abort_get_negotiated_curve,
+                        &curve);
+
+   RETURN (curve);
+}
 
 /*
  *--------------------------------------------------------------------------

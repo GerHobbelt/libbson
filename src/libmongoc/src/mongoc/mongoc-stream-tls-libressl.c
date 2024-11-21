@@ -428,6 +428,12 @@ _mongoc_stream_tls_libressl_should_retry (mongoc_stream_t *stream)
    RETURN (mongoc_stream_should_retry (tls->base_stream));
 }
 
+static int
+_mongoc_stream_tls_libressl_get_negotiated_curve (mongoc_stream_t *stream)
+{
+   return 0;
+}
+
 mongoc_stream_t *
 mongoc_stream_tls_libressl_new (mongoc_stream_t *base_stream, const char *host, mongoc_ssl_opt_t *opt, int client)
 {
@@ -459,6 +465,7 @@ mongoc_stream_tls_libressl_new (mongoc_stream_t *base_stream, const char *host, 
    tls->parent.check_closed = _mongoc_stream_tls_libressl_check_closed;
    tls->parent.timed_out = _mongoc_stream_tls_libressl_timed_out;
    tls->parent.should_retry = _mongoc_stream_tls_libressl_should_retry;
+   tls->parent.get_negotiated_curve = _mongoc_stream_tls_libressl_get_negotiated_curve;
    memcpy (&tls->ssl_opts, opt, sizeof tls->ssl_opts);
    tls->handshake = mongoc_stream_tls_libressl_handshake;
    tls->ctx = (void *) libressl;
