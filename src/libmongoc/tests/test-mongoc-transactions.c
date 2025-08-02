@@ -216,8 +216,9 @@ transactions_test_run_operation (json_test_ctx_t *ctx, const bson_t *test, const
 }
 
 
-static test_skip_t skips[] = {
-   {"callback is not retried after non-transient error (DuplicateKeyError)", "Waiting on CDRIVER-4811"}, {0}};
+static test_skip_t skips[] = {{.description = "callback is not retried after non-transient error (DuplicateKeyError)",
+                               .reason = "Waiting on CDRIVER-4811"},
+                              {0}};
 
 
 static void
@@ -441,7 +442,7 @@ _test_transient_txn_err (bool hangup)
       if (!mongoc_error_has_label ((_b), "TransientTransactionError")) { \
          test_error ("Reply lacks TransientTransactionError label: %s\n" \
                      "Running %s",                                       \
-                     bson_as_json ((_b), NULL),                          \
+                     bson_as_relaxed_extended_json ((_b), NULL),         \
                      #_expr);                                            \
       }                                                                  \
    } while (0)
@@ -584,11 +585,12 @@ test_unknown_commit_result (void)
    BSON_ASSERT (!r);
 
    if (!mongoc_error_has_label (&reply, "UnknownTransactionCommitResult")) {
-      test_error ("Reply lacks UnknownTransactionCommitResult label: %s", bson_as_json (&reply, NULL));
+      test_error ("Reply lacks UnknownTransactionCommitResult label: %s", bson_as_relaxed_extended_json (&reply, NULL));
    }
 
    if (mongoc_error_has_label (&reply, "TransientTransactionError")) {
-      test_error ("Reply shouldn't have TransientTransactionError label: %s", bson_as_json (&reply, NULL));
+      test_error ("Reply shouldn't have TransientTransactionError label: %s",
+                  bson_as_relaxed_extended_json (&reply, NULL));
    }
 
    bson_destroy (&reply);

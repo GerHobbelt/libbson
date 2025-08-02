@@ -184,7 +184,11 @@ run_uri_test (const char *uri_string, bool valid, const bson_t *hosts, const bso
 
       if ((bson_iter_init_find (&iter, auth, "db") || bson_iter_init_find (&iter, auth, "source")) &&
           BSON_ITER_HOLDS_UTF8 (&iter)) {
-         ASSERT_CMPSTR (auth_source, bson_iter_utf8 (&iter, NULL));
+         const char *auth_mech = mongoc_uri_get_auth_mechanism (uri);
+         if (auth_mech && 0 != strcmp (auth_mech, "MONGODB-AWS")) {
+            // Do not check expected auth source for MONGODB-AWS due to CDRIVER-5811.
+            ASSERT_CMPSTR (auth_source, bson_iter_utf8 (&iter, NULL));
+         }
       }
    }
 
@@ -244,6 +248,47 @@ test_connection_uri_cb (void *scenario_vp)
        .reason = "libmongoc does not support maxIdleTimeMS"},
       {.description = "Valid connection and timeout options are parsed correctly",
        .reason = "libmongoc does not support maxIdleTimeMS"},
+      {.description = "timeoutMS=0", .reason = "libmongoc does not support timeoutMS (CDRIVER-3786)"},
+      {.description = "Non-numeric timeoutMS causes a warning",
+       .reason = "libmongoc does not support timeoutMS (CDRIVER-3786)"},
+      {.description = "Too low timeoutMS causes a warning",
+       .reason = "libmongoc does not support timeoutMS (CDRIVER-3786)"},
+      {.description = "proxyPort without proxyHost", .reason = "libmongoc does not support proxies (CDRIVER-4187)"},
+      {.description = "proxyUsername without proxyHost", .reason = "libmongoc does not support proxies (CDRIVER-4187)"},
+      {.description = "proxyPassword without proxyHost", .reason = "libmongoc does not support proxies (CDRIVER-4187)"},
+      {.description = "all other proxy options without proxyHost",
+       .reason = "libmongoc does not support proxies (CDRIVER-4187)"},
+      {.description = "proxyUsername without proxyPassword",
+       .reason = "libmongoc does not support proxies (CDRIVER-4187)"},
+      {.description = "proxyPassword without proxyUsername",
+       .reason = "libmongoc does not support proxies (CDRIVER-4187)"},
+      {.description = "multiple proxyHost parameters", .reason = "libmongoc does not support proxies (CDRIVER-4187)"},
+      {.description = "multiple proxyPort parameters", .reason = "libmongoc does not support proxies (CDRIVER-4187)"},
+      {.description = "multiple proxyUsername parameters",
+       .reason = "libmongoc does not support proxies (CDRIVER-4187)"},
+      {.description = "multiple proxyPassword parameters",
+       .reason = "libmongoc does not support proxies (CDRIVER-4187)"},
+      {.description = "only host present", .reason = "libmongoc does not support proxies (CDRIVER-4187)"},
+      {.description = "host and default port present", .reason = "libmongoc does not support proxies (CDRIVER-4187)"},
+      {.description = "host and non-default port present",
+       .reason = "libmongoc does not support proxies (CDRIVER-4187)"},
+      {.description = "replicaset, host and non-default port present",
+       .reason = "libmongoc does not support proxies (CDRIVER-4187)"},
+      {.description = "all options present", .reason = "libmongoc does not support proxies (CDRIVER-4187)"},
+      {.description = "must raise an error when the hostname canonicalization is invalid",
+       .reason = "libmongoc does not-yet support non-boolean values for CANONICALIZE_HOST_NAME (CDRIVER-4128)"},
+      {.description = "must raise an error when the authSource is empty",
+       .reason = "libmongoc does not-yet error on empty authSource (CDRIVER-3517)"},
+      {.description = "must raise an error when the authSource is empty without credentials",
+       .reason = "libmongoc does not-yet error on empty authSource (CDRIVER-3517)"},
+      {.description = "should throw an exception if username and no password (MONGODB-AWS)",
+       .reason = "libmongoc does not-yet error with username and no password for MONGODB-AWS (CDRIVER-5811)"},
+      {.description = "(MONGODB-OIDC)",
+       .reason = "libmongoc does not-yet implement MONGODB-OIDC (CDRIVER-4489)",
+       .check_substring = true},
+      {.description = "Colon in a key value pair",
+       .reason = "libmongoc does not-yet implement MONGODB-OIDC (CDRIVER-4489)",
+       .check_substring = true},
       {.description = NULL},
    };
 

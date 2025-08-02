@@ -514,10 +514,10 @@ elseif (NOT ENABLE_CLIENT_SIDE_ENCRYPTION STREQUAL OFF)
       find_package (mongocrypt QUIET)
    endif ()
 
-   if (mongocrypt_FOUND AND "${mongocrypt_VERSION}" VERSION_LESS 1.11.0)
+   if (mongocrypt_FOUND AND "${mongocrypt_VERSION}" VERSION_LESS 1.12.0)
       message (STATUS "  libmongocrypt found at ${mongocrypt_DIR}")
       message (STATUS "  libmongocrypt version ${mongocrypt_VERSION} found")
-      message (STATUS "  libmongocrypt version 1.11.0 is required to enable In-Use Encryption Support.")
+      message (STATUS "  libmongocrypt version 1.12.0 is required to enable In-Use Encryption Support.")
       set (REQUIRED_MONGOCRYPT_VERSION_FOUND OFF)
    elseif (mongocrypt_FOUND)
       set (REQUIRED_MONGOCRYPT_VERSION_FOUND ON)
@@ -1040,6 +1040,7 @@ set (test-libmongoc-sources
    ${mongo-c-driver_SOURCE_DIR}/src/libbson/tests/test-bson-cmp.c
    ${mongo-c-driver_SOURCE_DIR}/src/libbson/tests/test-bson-corpus.c
    ${mongo-c-driver_SOURCE_DIR}/src/libbson/tests/test-bson-error.c
+   ${mongo-c-driver_SOURCE_DIR}/src/libbson/tests/test-bson-sync.c
    ${mongo-c-driver_SOURCE_DIR}/src/libbson/tests/test-bson-version.c
    ${mongo-c-driver_SOURCE_DIR}/src/libbson/tests/test-bson.c
    ${mongo-c-driver_SOURCE_DIR}/src/libbson/tests/test-clock.c
@@ -1337,6 +1338,11 @@ if (ENABLE_EXAMPLES AND ENABLE_SHARED)
    # examples/tutorial
    mongoc_add_example (executing ${PROJECT_SOURCE_DIR}/examples/tutorial/executing.c)
    mongoc_add_example (appending ${PROJECT_SOURCE_DIR}/examples/tutorial/appending.c)
+   mongoc_add_example (migrating ${PROJECT_SOURCE_DIR}/examples/migrating.c)
+   # Ignore deprecation warnings in migrating examples. Migrating examples deliberately call deprecated API to show how to migrate.
+   target_compile_options (migrating
+      PRIVATE $<$<NOT:$<C_COMPILER_ID:MSVC>>:-Wno-deprecated-declarations>
+   )
 endif ()
 
 if (ENABLE_TESTS AND ENABLE_SHARED AND MONGOC_ENABLE_SSL AND NOT WIN32)
