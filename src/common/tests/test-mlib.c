@@ -308,6 +308,7 @@ _test_cmp (void)
    // Unintuitive result due to integer promotion:
    mlib_diagnostic_push ();
    mlib_gnu_warning_disable ("-Wsign-compare");
+   mlib_disable_constant_conditional_expression_warnings ();
    ASSERT (-27 > 20u);
    mlib_diagnostic_pop ();
    // mlib_cmp produces the correct answer:
@@ -447,7 +448,7 @@ _test_foreach (void)
       ++n_loops;
       (void) i;
       ASSERT (n_loops <= 10);
-   };
+   }
    ASSERT (n_loops == 10);
 
    n_loops = 0;
