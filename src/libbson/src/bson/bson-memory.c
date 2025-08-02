@@ -24,7 +24,7 @@
 #include <bson/bson-memory.h>
 
 #include <common-macros-private.h>
-
+#include <mlib/config.h>
 
 // Ensure size of exported structs are stable.
 BSON_STATIC_ASSERT2 (bson_mem_vtable_t, sizeof (bson_mem_vtable_t) == sizeof (void *) * 8u);
