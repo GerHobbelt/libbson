@@ -151,8 +151,12 @@ test_dst_types (typelist<Dst...>)
    (void) arr;
 }
 
+#if defined(BUILD_MONOLITHIC)
+#define main   bson_chkint_test_main
+#endif
+
 int
-main ()
+main (void)
 {
    // Test that the dest can be used as an operand simultaneously:
    int a = 42;
@@ -175,4 +179,6 @@ main ()
    if (!have_ckdint_builtins ()) {
       puts ("@@ctest-skipped@@ - No __builtin_<op>_overflow builtins to test against");
    }
+
+   return 0;
 }
