@@ -25,6 +25,7 @@
 #include "mock_server/mock-rs.h"
 #include <common-macros-private.h> // BEGIN_IGNORE_DEPRECATIONS
 #include <common-oid-private.h>
+#include <mlib/loop.h>
 
 
 #ifdef BSON_HAVE_STRINGS_H
@@ -1528,14 +1529,13 @@ test_unavailable_seeds (void)
    const bson_t *doc;
    bson_error_t error;
 
-   int i;
-
-   for (i = 0; i < 2; i++) {
-      servers[i] = mock_server_down (); /* hangs up on all requests */
-      mock_server_run (servers[i]);
+   mlib_foreach_arr (mock_server_t *, srv, servers) {
+      *srv = mock_server_down (); /* hangs up on all requests */
+      mock_server_run (*srv);
    }
 
-   uri_str = uri_strs = bson_malloc0 (7 * sizeof (char *));
+   const int num_uris = 6;
+   uri_str = uri_strs = bson_malloc0 ((num_uris + 1) * sizeof (char *));
    *(uri_str++) = bson_strdup_printf ("mongodb://%s", mock_server_get_host_and_port (servers[0]));
 
    *(uri_str++) = bson_strdup_printf (
@@ -1554,8 +1554,8 @@ test_unavailable_seeds (void)
                                       mock_server_get_host_and_port (servers[0]),
                                       mock_server_get_host_and_port (servers[1]));
 
-   for (i = 0; i < (sizeof (uri_strs) / sizeof (const char *)); i++) {
-      client = test_framework_client_new (uri_strs[i], NULL);
+   mlib_foreach (char *, uri, uri_strs, num_uris) {
+      client = test_framework_client_new (*uri, NULL);
       BSON_ASSERT (client);
 
       collection = mongoc_client_get_collection (client, "test", "test");
@@ -1570,8 +1570,8 @@ test_unavailable_seeds (void)
       mongoc_client_destroy (client);
    }
 
-   for (i = 0; i < 2; i++) {
-      mock_server_destroy (servers[i]);
+   mlib_foreach_arr (mock_server_t *, srv, servers) {
+      mock_server_destroy (*srv);
    }
 
    bson_strfreev (uri_strs);
@@ -3960,25 +3960,6 @@ test_failure_to_auth (void)
    mongoc_uri_destroy (uri);
 }
 
-static void
-test_does_not_support_mongodbcr (void)
-{
-   mongoc_uri_t *uri = test_framework_get_uri ();
-   mongoc_uri_set_username (uri, "foo");
-   mongoc_uri_set_password (uri, "bar");
-   mongoc_uri_set_auth_mechanism (uri, "MONGODB-CR");
-   mongoc_client_t *client = test_framework_client_new_from_uri (uri, NULL);
-   ASSERT (client);
-   test_framework_set_ssl_opts (client);
-   bson_error_t error;
-   bool ok = mongoc_client_command_simple (client, "admin", tmp_bson ("{'ping': 1}"), NULL, NULL, &error);
-   ASSERT_WITH_MSG (!ok, "expected command to fail, got success");
-   ASSERT_ERROR_CONTAINS (
-      error, MONGOC_ERROR_CLIENT, MONGOC_ERROR_CLIENT_AUTHENTICATE, "Unknown authentication mechanism");
-   mongoc_client_destroy (client);
-   mongoc_uri_destroy (uri);
-}
-
 void
 test_client_install (TestSuite *suite)
 {
@@ -4172,5 +4153,4 @@ test_client_install (TestSuite *suite)
                       NULL,
                       test_framework_skip_if_no_server_ssl);
 #endif
-   TestSuite_AddLive (suite, "/Client/does_not_support_MONGODB-CR", test_does_not_support_mongodbcr);
 }

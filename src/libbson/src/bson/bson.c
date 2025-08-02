@@ -15,6 +15,7 @@
  */
 
 
+#include <mlib/intencode.h>
 #include <bson/bson.h>
 #include <bson/bson-config.h>
 #include <bson/bson-private.h>
@@ -288,17 +289,12 @@ _bson_data (const bson_t *bson) /* IN */
 static BSON_INLINE void
 _bson_encode_length (bson_t *bson) /* IN */
 {
-#if BSON_BYTE_ORDER == BSON_LITTLE_ENDIAN
-   memcpy (_bson_data (bson), &bson->len, sizeof (bson->len));
-#else
-   uint32_t length_le = BSON_UINT32_TO_LE (bson->len);
-   memcpy (_bson_data (bson), &length_le, sizeof (length_le));
-#endif
+   mlib_write_u32le (_bson_data (bson), bson->len);
 }
 
 
 typedef struct _bson_append_bytes_arg {
-   const uint8_t *bytes; // Not null.
+   const uint8_t *bytes; // Optional.
    uint32_t length;      // > 0.
 } _bson_append_bytes_arg;
 
@@ -369,7 +365,9 @@ BSON_STATIC_ASSERT2 (max_alloc_grow_fits_min_sizet, (uint64_t) BSON_MAX_SIZE * 2
    } else {                                                                                   \
       uint8_t *data = _bson_data ((_bson)) + ((_bson)->len - 1u);                             \
       for (const _bson_append_bytes_arg *arg = (_list).args; arg != (_list).current; ++arg) { \
-         memcpy (data, arg->bytes, arg->length);                                              \
+         if (arg->bytes) {                                                                    \
+            memcpy (data, arg->bytes, arg->length);                                           \
+         }                                                                                    \
          (_bson)->len += arg->length;                                                         \
          data += arg->length;                                                                 \
       }                                                                                       \
@@ -744,16 +742,15 @@ append_failure:
 /*
  *--------------------------------------------------------------------------
  *
- * bson_append_binary --
+ * _bson_append_binary --
  *
- *       Append binary data to @bson. The field will have the
- *       BSON_TYPE_BINARY type.
+ *       Append a BSON_TYPE_BINARY field, optionally copying @binary into the field.
  *
  * Parameters:
  *       @subtype: the BSON Binary Subtype. See bsonspec.org for more
  *                 information.
- *       @binary: a pointer to the raw binary data.
- *       @length: the size of @binary in bytes.
+ *       @binary: Optional pointer to the raw binary data.
+ *       @length: the size of the field's binary data in bytes.
  *
  * Returns:
  *       true if successful; otherwise false.
@@ -764,22 +761,19 @@ append_failure:
  *--------------------------------------------------------------------------
  */
 
-bool
-bson_append_binary (bson_t *bson,           /* IN */
-                    const char *key,        /* IN */
-                    int key_length,         /* IN */
-                    bson_subtype_t subtype, /* IN */
-                    const uint8_t *binary,  /* IN */
-                    uint32_t length)        /* IN */
+static bool
+_bson_append_binary (bson_t *bson,           /* IN */
+                     const char *key,        /* IN */
+                     int key_length,         /* IN */
+                     bson_subtype_t subtype, /* IN */
+                     const uint8_t *binary,  /* IN */
+                     uint32_t length)        /* IN */
 {
    static const uint8_t type = BSON_TYPE_BINARY;
 
    BSON_ASSERT_PARAM (bson);
    BSON_ASSERT_PARAM (key);
-
-   if (!binary && length > 0u) {
-      return false;
-   }
+   BSON_OPTIONAL_PARAM (binary);
 
    BSON_APPEND_BYTES_LIST_DECLARE (args);
 
@@ -817,6 +811,87 @@ bson_append_binary (bson_t *bson,           /* IN */
 
 append_failure:
    return false;
+}
+
+
+/*
+ *--------------------------------------------------------------------------
+ *
+ * bson_append_binary --
+ *
+ *       Append binary data to @bson. The field will have the
+ *       BSON_TYPE_BINARY type.
+ *
+ * Parameters:
+ *       @subtype: the BSON Binary Subtype. See bsonspec.org for more
+ *                 information.
+ *       @binary: a pointer to the raw binary data.
+ *       @length: the size of @binary in bytes.
+ *
+ * Returns:
+ *       true if successful; otherwise false.
+ *
+ * Side effects:
+ *       None.
+ *
+ *--------------------------------------------------------------------------
+ */
+
+bool
+bson_append_binary (bson_t *bson,           /* IN */
+                    const char *key,        /* IN */
+                    int key_length,         /* IN */
+                    bson_subtype_t subtype, /* IN */
+                    const uint8_t *binary,  /* IN */
+                    uint32_t length)        /* IN */
+{
+   if (!binary && length > 0u) {
+      return false;
+   }
+   return _bson_append_binary (bson, key, key_length, subtype, binary, length);
+}
+
+
+/*
+ *--------------------------------------------------------------------------
+ *
+ * bson_append_binary_uninit --
+ *
+ *       Append binary data to @bson by framing an uninitialized field to be written by the caller.
+ *       The field will have the BSON_TYPE_BINARY type. On success, the caller MUST write to all
+ *       bytes in the binary data field. The returned `*binary` pointer may be invalidated by
+ *       subsequent modifications to @bson.
+ *
+ * Parameters:
+ *       @subtype: the BSON Binary Subtype. See bsonspec.org for more
+ *                 information.
+ *       @binary: Output parameter for a temporary pointer where the binary item's contents must be written.
+ *       @length: the size of @binary in bytes.
+ *
+ * Returns:
+ *       true if successful; otherwise false.
+ *
+ * Side effects:
+ *       None.
+ *
+ *--------------------------------------------------------------------------
+ */
+
+bool
+bson_append_binary_uninit (bson_t *bson,           /* IN */
+                           const char *key,        /* IN */
+                           int key_length,         /* IN */
+                           bson_subtype_t subtype, /* IN */
+                           uint8_t **binary,       /* IN */
+                           uint32_t length)        /* IN */
+{
+   BSON_ASSERT_PARAM (binary);
+   if (_bson_append_binary (bson, key, key_length, subtype, NULL, length)) {
+      *binary = _bson_data (bson) + bson->len - 1u - length;
+      return true;
+   } else {
+      return false;
+   }
 }
 
 
@@ -1858,7 +1933,6 @@ bool
 bson_init_static (bson_t *bson, const uint8_t *data, size_t length)
 {
    bson_impl_alloc_t *impl = (bson_impl_alloc_t *) bson;
-   uint32_t len_le;
 
    BSON_ASSERT (bson);
    BSON_ASSERT (data);
@@ -1867,9 +1941,9 @@ bson_init_static (bson_t *bson, const uint8_t *data, size_t length)
       return false;
    }
 
-   memcpy (&len_le, data, sizeof (len_le));
+   const uint32_t hdr_len = mlib_read_u32le (data);
 
-   if ((size_t) BSON_UINT32_FROM_LE (len_le) != length) {
+   if (hdr_len != length) {
       return false;
    }
 
@@ -1959,22 +2033,21 @@ bson_sized_new (size_t size)
 bson_t *
 bson_new_from_data (const uint8_t *data, size_t length)
 {
-   uint32_t len_le;
-   bson_t *bson;
-
    BSON_ASSERT (data);
 
    if ((length < 5) || (length > BSON_MAX_SIZE) || data[length - 1]) {
+      // Invalid length, or not null-terminated
       return NULL;
    }
 
-   memcpy (&len_le, data, sizeof (len_le));
+   const int32_t hdr = mlib_read_i32le (data);
 
-   if (length != (size_t) BSON_UINT32_FROM_LE (len_le)) {
+   if (mlib_cmp (hdr, !=, length)) {
+      // Header's declared length is not equal to the length of the data buffer we were given
       return NULL;
    }
 
-   bson = bson_sized_new (length);
+   bson_t *const bson = bson_sized_new (length);
    memcpy (_bson_data (bson), data, length);
    bson->len = (uint32_t) length;
 
@@ -1986,7 +2059,6 @@ bson_t *
 bson_new_from_buffer (uint8_t **buf, size_t *buf_len, bson_realloc_func realloc_func, void *realloc_func_ctx)
 {
    bson_impl_alloc_t *impl;
-   uint32_t len_le;
    uint32_t length;
    bson_t *bson;
 
@@ -2002,20 +2074,17 @@ bson_new_from_buffer (uint8_t **buf, size_t *buf_len, bson_realloc_func realloc_
 
    if (!*buf) {
       length = 5;
-      len_le = BSON_UINT32_TO_LE (length);
       *buf_len = 5;
       *buf = realloc_func (*buf, *buf_len, realloc_func_ctx);
-      memcpy (*buf, &len_le, sizeof (len_le));
+      mlib_write_u32le (*buf, length);
       (*buf)[4] = '\0';
    } else {
       if ((*buf_len < 5) || (*buf_len > BSON_MAX_SIZE)) {
          bson_free (bson);
          return NULL;
       }
-
-      memcpy (&len_le, *buf, sizeof (len_le));
-      length = BSON_UINT32_FROM_LE (len_le);
-      if ((size_t) length > *buf_len) {
+      length = mlib_read_u32le (*buf);
+      if (length > *buf_len) {
          bson_free (bson);
          return NULL;
       }
@@ -2794,10 +2863,18 @@ bson_array_builder_append_value (bson_array_builder_t *bab, const bson_value_t *
    bson_array_builder_append_impl (bson_append_value, value);
 }
 
+
 bool
 bson_array_builder_append_array (bson_array_builder_t *bab, const bson_t *array)
 {
    bson_array_builder_append_impl (bson_append_array, array);
+}
+
+
+bool
+bson_array_builder_append_array_from_vector (bson_array_builder_t *bab, const bson_iter_t *iter)
+{
+   bson_array_builder_append_impl (bson_append_array_from_vector, iter);
 }
 
 
@@ -2808,6 +2885,16 @@ bson_array_builder_append_binary (bson_array_builder_t *bab,
                                   uint32_t length)
 {
    bson_array_builder_append_impl (bson_append_binary, subtype, binary, length);
+}
+
+
+bool
+bson_array_builder_append_binary_uninit (bson_array_builder_t *bab,
+                                         bson_subtype_t subtype,
+                                         uint8_t **binary,
+                                         uint32_t length)
+{
+   bson_array_builder_append_impl (bson_append_binary_uninit, subtype, binary, length);
 }
 
 
