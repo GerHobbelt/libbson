@@ -16,7 +16,6 @@ include (ParseVersion)
 ParseVersion ("${BUILD_VERSION}" MONGOC)
 # Defines additional similar variables:
 include (LoadVersion)
-file (WRITE VERSION_CURRENT "${BUILD_VERSION}")
 LoadVersion (VERSION_CURRENT MONGOC)
 
 # Extended version attributes that CMake doesn't (yet) understand, which include
@@ -185,42 +184,6 @@ mongo_bool_setting(
    ]]
 )
 
-# Deprecated options:
-mongo_bool_setting(
-   ENABLE_AUTOMATIC_INIT_AND_CLEANUP
-      "[Deprecated] Enable automatic initialization of the C driver library"
-   DEFAULT EVAL [[
-         set(DEFAULT OFF)
-         if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
-            message(VERBOSE "For backwards compatibility, when using GCC the default of "
-                            "ENABLE_AUTOMATIC_INIT_AND_CLEANUP is ON")
-            set(DEFAULT ON)
-         endif()
-      ]]
-      DEVEL VALUE OFF
-   VALIDATE CODE [[
-      if(ENABLE_AUTOMATIC_INIT_AND_CLEANUP)
-         if(NOT CMAKE_C_COMPILER_ID STREQUAL "GNU")
-            message(WARNING "ENABLE_AUTOMATIC_INIT_AND_CLEANUP is only supported on GCC.")
-         endif()
-         message(DEPRECATION
-                  "Enabling ENABLE_AUTOMATIC_INIT_AND_CLEANUP is deprecated and "
-                  "may be removed in a future release")
-      endif()
-   ]]
-)
-mongo_bool_setting(
-   ENABLE_EXTRA_ALIGNMENT
-      "[Deprecated] Enable extra alignment on libbson types"
-   DEFAULT VALUE ON
-      DEVEL VALUE OFF
-   VALIDATE CODE [[
-      if(ENABLE_EXTRA_ALIGNMENT AND MONGO_SANITIZE MATCHES "undefined")
-         message(WARNING "ENABLE_EXTRA_ALIGNMENT=“${ENABLE_EXTRA_ALIGNMENT}” will create conflicts with UndefinedBehaviorSanitizer")
-      endif()
-   ]]
-)
-
 # Announce the build configuration. Used by `mlib_build_config_is()` in `mlib/config.h`
 add_compile_definitions(_MLIB_BUILD_CONFIG=$<CONFIG>)
 
@@ -324,8 +287,6 @@ endif ()
 if ( (ENABLE_BUILD_DEPENDECIES STREQUAL OFF) AND (NOT CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR) )
    set (ENABLE_BUILD_DEPENDECIES ON)
 endif ()
-
-mongo_pick(BSON_EXTRA_ALIGN 1 0 ENABLE_EXTRA_ALIGNMENT)
 
 mongo_pick(MONGOC_ENABLE_RDTSCP 1 0 ENABLE_RDTSCP)
 

@@ -48,11 +48,8 @@ all_variants = [
             "debug-compile-no-counters",
             "compile-tracing",
             "link-with-cmake",
-            "link-with-cmake-deprecated",
             "link-with-cmake-ssl",
-            "link-with-cmake-ssl-deprecated",
             "link-with-cmake-snappy",
-            "link-with-cmake-snappy-deprecated",
             OD([("name", "link-with-cmake-mac"), ("distros", ["macos-14-arm64"])]),
             OD([("name", "link-with-cmake-mac-deprecated"), ("distros", ["macos-14-arm64"])]),
             OD([("name", "link-with-cmake-windows"), ("distros", ["windows-vsCurrent-large"])]),
@@ -111,7 +108,6 @@ all_variants = [
         [
             "release-compile",
             "debug-compile-nosasl-nossl",
-            "debug-compile-no-align",
             ".debug-compile !.sspi .nossl .nosasl",
             ".latest .nossl .nosasl",
         ],
@@ -151,7 +147,7 @@ all_variants = [
         "gcc94-i686",
         "GCC 9.4 (i686) (Ubuntu 20.04)",
         "ubuntu2004-test",
-        ["release-compile", "debug-compile-nosasl-nossl", "debug-compile-no-align", ".latest .nossl .nosasl"],
+        ["release-compile", "debug-compile-nosasl-nossl", ".latest .nossl .nosasl"],
         {"CC": "gcc", "MARCH": "i686"},
     ),
     Variant(
@@ -163,7 +159,6 @@ all_variants = [
             "debug-compile-nosrv",
             "release-compile",
             "debug-compile-nosasl-nossl",
-            "debug-compile-no-align",
             "debug-compile-sasl-openssl",
             "debug-compile-nosasl-openssl",
             ".authentication-tests .openssl",
@@ -185,7 +180,6 @@ all_variants = [
             ".compression !.snappy",
             "release-compile",
             "debug-compile-nosasl-nossl",
-            "debug-compile-no-align",
             "debug-compile-nosrv",
             "debug-compile-sasl-darwinssl",
             "debug-compile-nosasl-nossl",
@@ -250,7 +244,6 @@ all_variants = [
         ["debug-compile-nosasl-nossl", ".latest .nossl .nosasl .server"],
         {"CC": "mingw"},
     ),
-    Variant("mingw", "MinGW-W64", "windows-vsCurrent-large", ["debug-compile-no-align"], {"CC": "mingw"}),
     Variant(
         "rhel8-power",
         "Power (ppc64le) (RHEL 8)",
@@ -272,7 +265,6 @@ all_variants = [
         "ubuntu2004-arm64-large",
         [
             ".compression !.snappy !.zstd",
-            "debug-compile-no-align",
             "release-compile",
             "debug-compile-nosasl-nossl",
             "debug-compile-nosasl-openssl",
@@ -291,7 +283,6 @@ all_variants = [
         [
             "release-compile",
             #      '.compression', --> TODO: waiting on ticket CDRIVER-3258
-            "debug-compile-no-align",
             "debug-compile-nosasl-nossl",
             "debug-compile-nosasl-openssl",
             "debug-compile-sasl-openssl",

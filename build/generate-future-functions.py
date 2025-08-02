@@ -87,7 +87,6 @@ typedef_list = [
     typedef("mongoc_iovec_ptr", "mongoc_iovec_t *"),
     typedef("mongoc_server_stream_ptr", "mongoc_server_stream_t *"),
     typedef("mongoc_query_flags_t", None),
-    typedef("const_mongoc_index_opt_t", "const mongoc_index_opt_t *"),
     typedef("mongoc_server_description_ptr", "mongoc_server_description_t *"),
     typedef("mongoc_ss_optype_t", None),
     typedef("mongoc_topology_ptr", "mongoc_topology_t *"),
@@ -104,6 +103,7 @@ typedef_list = [
             "const mongoc_write_concern_t *"),
     typedef("const_mongoc_ss_log_context_ptr",
             "const mongoc_ss_log_context_t *"),
+    typedef("mongoc_index_model_t_ptr_const_ptr", "mongoc_index_model_t *const *")
 ]
 
 type_list = [T.name for T in typedef_list]
@@ -201,11 +201,6 @@ future_functions = [
                      param("bson_ptr", "reply"),
                      param("bson_error_ptr", "error")]),
 
-    future_function("void",
-                    "mongoc_client_kill_cursor",
-                    [param("mongoc_client_ptr", "client"),
-                     param("int64_t", "cursor_id")]),
-
     future_function("mongoc_change_stream_ptr",
                     "mongoc_client_watch",
                     [param("mongoc_client_ptr", "client"),
@@ -242,10 +237,10 @@ future_functions = [
                      param("bson_error_ptr", "error")]),
 
     future_function("bool",
-                    "mongoc_collection_create_index_with_opts",
+                    "mongoc_collection_create_indexes_with_opts",
                     [param("mongoc_collection_ptr", "collection"),
-                     param("const_bson_ptr", "keys"),
-                     param("const_mongoc_index_opt_t", "opt"),
+                     param("mongoc_index_model_t_ptr_const_ptr", "models"),
+                     param("size_t", "num_models"),
                      param("const_bson_ptr", "opts"),
                      param("bson_ptr", "reply"),
                      param("bson_error_ptr", "error")]),
@@ -573,7 +568,7 @@ def future_function_name(fn):
         # E.g. future_cursor_next().
         return 'future' + fn.name[len('mongoc'):]
     else:
-        # E.g. future__mongoc_client_kill_cursor().
+        # E.g. future_mongoc_client_command_simple().
         return 'future_' + fn.name
 
 

@@ -258,23 +258,6 @@ BSON_THREAD_FUN (background_mongoc_client_read_write_command_with_opts, data)
 }
 
 static
-BSON_THREAD_FUN (background_mongoc_client_kill_cursor, data)
-{
-   future_t *future = (future_t *) data;
-   future_value_t return_value;
-
-   return_value.type = future_value_void_type;
-
-   mongoc_client_kill_cursor (
-      future_value_get_mongoc_client_ptr (future_get_param (future, 0)),
-      future_value_get_int64_t (future_get_param (future, 1)));
-
-   future_resolve (future, return_value);
-
-   BSON_THREAD_RETURN;
-}
-
-static
 BSON_THREAD_FUN (background_mongoc_client_watch, data)
 {
    future_t *future = (future_t *) data;
@@ -370,7 +353,7 @@ BSON_THREAD_FUN (background_mongoc_collection_count_with_opts, data)
 }
 
 static
-BSON_THREAD_FUN (background_mongoc_collection_create_index_with_opts, data)
+BSON_THREAD_FUN (background_mongoc_collection_create_indexes_with_opts, data)
 {
    future_t *future = (future_t *) data;
    future_value_t return_value;
@@ -379,10 +362,10 @@ BSON_THREAD_FUN (background_mongoc_collection_create_index_with_opts, data)
 
    future_value_set_bool (
       &return_value,
-      mongoc_collection_create_index_with_opts (
+      mongoc_collection_create_indexes_with_opts (
          future_value_get_mongoc_collection_ptr (future_get_param (future, 0)),
-         future_value_get_const_bson_ptr (future_get_param (future, 1)),
-         future_value_get_const_mongoc_index_opt_t (future_get_param (future, 2)),
+         future_value_get_mongoc_index_model_t_ptr_const_ptr (future_get_param (future, 1)),
+         future_value_get_size_t (future_get_param (future, 2)),
          future_value_get_const_bson_ptr (future_get_param (future, 3)),
          future_value_get_bson_ptr (future_get_param (future, 4)),
          future_value_get_bson_error_ptr (future_get_param (future, 5))
@@ -1630,24 +1613,6 @@ future_client_read_write_command_with_opts (
 }
 
 future_t *
-future_client_kill_cursor (
-   mongoc_client_ptr client,
-   int64_t cursor_id)
-{
-   future_t *future = future_new (future_value_void_type,
-                                  2);
-   
-   future_value_set_mongoc_client_ptr (
-      future_get_param (future, 0), client);
-   
-   future_value_set_int64_t (
-      future_get_param (future, 1), cursor_id);
-   
-   future_start (future, background_mongoc_client_kill_cursor);
-   return future;
-}
-
-future_t *
 future_client_watch (
    mongoc_client_ptr client,
    const_bson_ptr pipeline,
@@ -1780,10 +1745,10 @@ future_collection_count_with_opts (
 }
 
 future_t *
-future_collection_create_index_with_opts (
+future_collection_create_indexes_with_opts (
    mongoc_collection_ptr collection,
-   const_bson_ptr keys,
-   const_mongoc_index_opt_t opt,
+   mongoc_index_model_t_ptr_const_ptr models,
+   size_t num_models,
    const_bson_ptr opts,
    bson_ptr reply,
    bson_error_ptr error)
@@ -1794,11 +1759,11 @@ future_collection_create_index_with_opts (
    future_value_set_mongoc_collection_ptr (
       future_get_param (future, 0), collection);
    
-   future_value_set_const_bson_ptr (
-      future_get_param (future, 1), keys);
+   future_value_set_mongoc_index_model_t_ptr_const_ptr (
+      future_get_param (future, 1), models);
    
-   future_value_set_const_mongoc_index_opt_t (
-      future_get_param (future, 2), opt);
+   future_value_set_size_t (
+      future_get_param (future, 2), num_models);
    
    future_value_set_const_bson_ptr (
       future_get_param (future, 3), opts);
@@ -1809,7 +1774,7 @@ future_collection_create_index_with_opts (
    future_value_set_bson_error_ptr (
       future_get_param (future, 5), error);
    
-   future_start (future, background_mongoc_collection_create_index_with_opts);
+   future_start (future, background_mongoc_collection_create_indexes_with_opts);
    return future;
 }
 

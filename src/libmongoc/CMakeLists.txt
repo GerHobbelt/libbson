@@ -380,12 +380,6 @@ add_feature_info(
    "authenticate with MongoDB servers using SASL: “Simple Authentication and Security Layer” (${SASL_BACKEND})"
 )
 
-if (ENABLE_AUTOMATIC_INIT_AND_CLEANUP)
-   set (MONGOC_NO_AUTOMATIC_GLOBALS 0)
-else ()
-   set (MONGOC_NO_AUTOMATIC_GLOBALS 1)
-endif ()
-
 if (WIN32)
    SET (CMAKE_EXTRA_INCLUDE_FILES "ws2tcpip.h")
 else ()
@@ -593,7 +587,6 @@ set (MONGOC_SOURCES
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-handshake.c
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-host-list.c
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-http.c
-   ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-index.c
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-init.c
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-interrupt.c
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-list.c
@@ -719,7 +712,6 @@ set (HEADERS
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-handshake.h
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-host-list.h
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-init.h
-   ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-index.h
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-iovec.h
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-log.h
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-macros.h
@@ -1414,8 +1406,6 @@ install (
    COMPONENT
       Devel
 )
-
-include (LegacyPackage)
 
 if (ENABLE_MAN_PAGES STREQUAL ON OR ENABLE_HTML_DOCS STREQUAL ON)
    find_package (Sphinx REQUIRED)
