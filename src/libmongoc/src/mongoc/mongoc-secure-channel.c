@@ -28,9 +28,9 @@
 #include <mongoc/mongoc-secure-channel-private.h>
 #include <mongoc/mongoc-stream-tls-secure-channel-private.h>
 #include <mongoc/mongoc-errno-private.h>
-#include <mongoc/mongoc-error.h>
+#include <mongoc/mongoc-error-private.h>
 #include <common-string-private.h>
-#include <common-cmp-private.h>
+#include <mlib/cmp.h>
 
 
 #undef MONGOC_LOG_DOMAIN
@@ -425,7 +425,7 @@ mongoc_secure_channel_read (mongoc_stream_tls_t *tls, void *data, size_t data_le
 {
    BSON_ASSERT_PARAM (tls);
 
-   if (BSON_UNLIKELY (!mcommon_in_range_signed (int32_t, tls->timeout_msec))) {
+   if (BSON_UNLIKELY (!mlib_in_range (int32_t, tls->timeout_msec))) {
       // CDRIVER-4589
       MONGOC_ERROR ("timeout_msec value %" PRId64 " exceeds supported 32-bit range", tls->timeout_msec);
       return -1;
@@ -453,7 +453,7 @@ mongoc_secure_channel_write (mongoc_stream_tls_t *tls, const void *data, size_t 
 {
    BSON_ASSERT_PARAM (tls);
 
-   if (BSON_UNLIKELY (!mcommon_in_range_signed (int32_t, tls->timeout_msec))) {
+   if (BSON_UNLIKELY (!mlib_in_range (int32_t, tls->timeout_msec))) {
       // CDRIVER-4589
       MONGOC_ERROR ("timeout_msec value %" PRId64 " exceeds supported 32-bit range", tls->timeout_msec);
       return -1;
@@ -527,10 +527,10 @@ _mongoc_secure_channel_init_sec_buffer_desc (SecBufferDesc *desc, SecBuffer *buf
 }
 
 
-#define MONGOC_LOG_AND_SET_ERROR(ERROR, DOMAIN, CODE, ...) \
-   do {                                                    \
-      MONGOC_ERROR (__VA_ARGS__);                          \
-      bson_set_error (ERROR, DOMAIN, CODE, __VA_ARGS__);   \
+#define MONGOC_LOG_AND_SET_ERROR(ERROR, DOMAIN, CODE, ...)  \
+   do {                                                     \
+      MONGOC_ERROR (__VA_ARGS__);                           \
+      _mongoc_set_error (ERROR, DOMAIN, CODE, __VA_ARGS__); \
    } while (0)
 
 bool

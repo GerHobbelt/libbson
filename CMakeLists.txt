@@ -233,6 +233,9 @@ mongo_bool_setting(
    ]]
 )
 
+# Announce the build configuration. Used by `mlib_build_config_is()` in `mlib/config.h`
+add_compile_definitions(_MLIB_BUILD_CONFIG=$<CONFIG>)
+
 if(ENABLE_COVERAGE)
    mongo_platform_link_options(--coverage)
    mongo_platform_compile_options($<BUILD_INTERFACE:--coverage>)
@@ -448,6 +451,7 @@ endif ()
 
 if (MSVC)
    add_definitions (-D_CRT_SECURE_NO_WARNINGS)
+   list (APPEND CMAKE_REQUIRED_DEFINITIONS -D_CRT_SECURE_NO_WARNINGS)
 endif ()
 
 if (ENABLE_MONGOC)
@@ -461,11 +465,6 @@ if (ENABLE_MONGOC)
 
    # Ensure the default behavior: don't ignore RPATH settings.
    set (CMAKE_SKIP_BUILD_RPATH OFF)
-
-   if (APPLE)
-      # Until CDRIVER-520.
-      add_definitions (-Wno-deprecated-declarations)
-   endif ()
 
    if (NOT ENABLE_MONGODB_AWS_AUTH MATCHES "ON|OFF|AUTO")
       message (FATAL_ERROR "ENABLE_MONGODB_AWS_AUTH option must be ON, AUTO, or OFF")

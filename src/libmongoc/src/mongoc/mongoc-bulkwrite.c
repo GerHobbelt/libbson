@@ -23,11 +23,11 @@
 #include <mongoc/mongoc-buffer-private.h>
 #include <mongoc/mongoc-client-private.h>
 #include <mongoc/mongoc-client-side-encryption-private.h>
-#include <mongoc/mongoc-error.h>
+#include <mongoc/mongoc-error-private.h>
 #include <mongoc/mongoc-server-stream-private.h>
 #include <mongoc/mongoc-util-private.h> // _mongoc_iter_document_as_bson
 #include <mongoc/mongoc-optional.h>
-#include <common-cmp-private.h>
+#include <mlib/cmp.h>
 
 MC_ENABLE_CONVERSION_WARNING_BEGIN
 
@@ -139,7 +139,12 @@ mongoc_bulkwriteopts_destroy (mongoc_bulkwriteopts_t *self)
 typedef enum { MODEL_OP_INSERT, MODEL_OP_UPDATE, MODEL_OP_DELETE } model_op_t;
 typedef struct {
    model_op_t op;
-   bson_iter_t id_iter;
+   // `id_loc` locates the "_id" field of an insert document.
+   struct {
+      size_t op_start;    // Offset in `mongoc_bulkwrite_t::ops` to the BSON for the insert op: { "document": ... }
+      size_t op_len;      // Length of insert op.
+      uint32_t id_offset; // Offset in the insert op to the "_id" field.
+   } id_loc;
    char *ns;
 } modeldata_t;
 
@@ -218,11 +223,12 @@ mongoc_bulkwrite_insertoneopts_destroy (mongoc_bulkwrite_insertoneopts_t *self)
    bson_free (self);
 }
 
-#define ERROR_IF_EXECUTED                                                                                            \
-   if (self->executed) {                                                                                             \
-      bson_set_error (error, MONGOC_ERROR_COMMAND, MONGOC_ERROR_COMMAND_INVALID_ARG, "bulk write already executed"); \
-      return false;                                                                                                  \
-   } else                                                                                                            \
+#define ERROR_IF_EXECUTED                                                                               \
+   if (self->executed) {                                                                                \
+      _mongoc_set_error (                                                                               \
+         error, MONGOC_ERROR_COMMAND, MONGOC_ERROR_COMMAND_INVALID_ARG, "bulk write already executed"); \
+      return false;                                                                                     \
+   } else                                                                                               \
       (void) 0
 
 bool
@@ -277,19 +283,14 @@ mongoc_bulkwrite_append_insertone (mongoc_bulkwrite_t *self,
       persisted_id_offset += existing_id_offset;
    }
 
-   BSON_ASSERT (_mongoc_buffer_append (&self->ops, bson_get_data (&op), op.len));
-
-   // Store an iterator to the document's `_id` in the persisted payload:
-   bson_iter_t persisted_id_iter;
-   {
-      BSON_ASSERT (mcommon_in_range_size_t_unsigned (op.len));
-      size_t start = self->ops.len - (size_t) op.len;
-      BSON_ASSERT (bson_iter_init_from_data_at_offset (
-         &persisted_id_iter, self->ops.data + start, (size_t) op.len, persisted_id_offset, strlen ("_id")));
-   }
+   size_t op_start = self->ops.len; // Save location of `op` to retrieve `_id` later.
+   BSON_ASSERT (mlib_in_range (size_t, op.len));
+   BSON_ASSERT (_mongoc_buffer_append (&self->ops, bson_get_data (&op), (size_t) op.len));
 
    self->n_ops++;
-   modeldata_t md = {.op = MODEL_OP_INSERT, .id_iter = persisted_id_iter, .ns = bson_strdup (ns)};
+   modeldata_t md = {.op = MODEL_OP_INSERT,
+                     .id_loc = {.op_start = op_start, .op_len = (size_t) op.len, .id_offset = persisted_id_offset},
+                     .ns = bson_strdup (ns)};
    _mongoc_array_append_val (&self->arrayof_modeldata, md);
    bson_destroy (&op);
    return true;
@@ -314,12 +315,12 @@ validate_update (const bson_t *update, bool *is_pipeline, bson_error_t *error)
    if (bson_iter_next (&iter)) {
       const char *key = bson_iter_key (&iter);
       if (key[0] != '$') {
-         bson_set_error (error,
-                         MONGOC_ERROR_COMMAND,
-                         MONGOC_ERROR_COMMAND_INVALID_ARG,
-                         "Invalid key '%s': update only works with $ operators"
-                         " and pipelines",
-                         key);
+         _mongoc_set_error (error,
+                            MONGOC_ERROR_COMMAND,
+                            MONGOC_ERROR_COMMAND_INVALID_ARG,
+                            "Invalid key '%s': update only works with $ operators"
+                            " and pipelines",
+                            key);
 
          return false;
       }
@@ -514,11 +515,11 @@ validate_replace (const bson_t *doc, bson_error_t *error)
    if (bson_iter_next (&iter)) {
       const char *key = bson_iter_key (&iter);
       if (key[0] == '$') {
-         bson_set_error (error,
-                         MONGOC_ERROR_COMMAND,
-                         MONGOC_ERROR_COMMAND_INVALID_ARG,
-                         "Invalid key '%s': replace prohibits $ operators",
-                         key);
+         _mongoc_set_error (error,
+                            MONGOC_ERROR_COMMAND,
+                            MONGOC_ERROR_COMMAND_INVALID_ARG,
+                            "Invalid key '%s': replace prohibits $ operators",
+                            key);
 
          return false;
       }
@@ -1163,18 +1164,18 @@ lookup_int32 (const bson_t *bson, const char *key, int32_t *out, const char *sou
    }
    bson_error_t error;
    if (source) {
-      bson_set_error (&error,
-                      MONGOC_ERROR_COMMAND,
-                      MONGOC_ERROR_COMMAND_INVALID_ARG,
-                      "expected to find int32 `%s` in %s, but did not",
-                      key,
-                      source);
+      _mongoc_set_error (&error,
+                         MONGOC_ERROR_COMMAND,
+                         MONGOC_ERROR_COMMAND_INVALID_ARG,
+                         "expected to find int32 `%s` in %s, but did not",
+                         key,
+                         source);
    } else {
-      bson_set_error (&error,
-                      MONGOC_ERROR_COMMAND,
-                      MONGOC_ERROR_COMMAND_INVALID_ARG,
-                      "expected to find int32 `%s`, but did not",
-                      key);
+      _mongoc_set_error (&error,
+                         MONGOC_ERROR_COMMAND,
+                         MONGOC_ERROR_COMMAND_INVALID_ARG,
+                         "expected to find int32 `%s`, but did not",
+                         key);
    }
    _bulkwriteexception_set_error (exc, &error);
    return false;
@@ -1198,18 +1199,18 @@ lookup_as_int64 (
    }
    bson_error_t error;
    if (source) {
-      bson_set_error (&error,
-                      MONGOC_ERROR_COMMAND,
-                      MONGOC_ERROR_COMMAND_INVALID_ARG,
-                      "expected to find int32, int64, or double `%s` in %s, but did not",
-                      key,
-                      source);
+      _mongoc_set_error (&error,
+                         MONGOC_ERROR_COMMAND,
+                         MONGOC_ERROR_COMMAND_INVALID_ARG,
+                         "expected to find int32, int64, or double `%s` in %s, but did not",
+                         key,
+                         source);
    } else {
-      bson_set_error (&error,
-                      MONGOC_ERROR_COMMAND,
-                      MONGOC_ERROR_COMMAND_INVALID_ARG,
-                      "expected to find int32, int64, or double `%s`, but did not",
-                      key);
+      _mongoc_set_error (&error,
+                         MONGOC_ERROR_COMMAND,
+                         MONGOC_ERROR_COMMAND_INVALID_ARG,
+                         "expected to find int32, int64, or double `%s`, but did not",
+                         key);
    }
    _bulkwriteexception_set_error (exc, &error);
    return false;
@@ -1232,18 +1233,18 @@ lookup_string (
    }
    bson_error_t error;
    if (source) {
-      bson_set_error (&error,
-                      MONGOC_ERROR_COMMAND,
-                      MONGOC_ERROR_COMMAND_INVALID_ARG,
-                      "expected to find string `%s` in %s, but did not",
-                      key,
-                      source);
+      _mongoc_set_error (&error,
+                         MONGOC_ERROR_COMMAND,
+                         MONGOC_ERROR_COMMAND_INVALID_ARG,
+                         "expected to find string `%s` in %s, but did not",
+                         key,
+                         source);
    } else {
-      bson_set_error (&error,
-                      MONGOC_ERROR_COMMAND,
-                      MONGOC_ERROR_COMMAND_INVALID_ARG,
-                      "expected to find string `%s`, but did not",
-                      key);
+      _mongoc_set_error (&error,
+                         MONGOC_ERROR_COMMAND,
+                         MONGOC_ERROR_COMMAND_INVALID_ARG,
+                         "expected to find string `%s`, but did not",
+                         key);
    }
    _bulkwriteexception_set_error (exc, &error);
    return false;
@@ -1340,7 +1341,8 @@ static bool
 _bulkwritereturn_apply_result (mongoc_bulkwritereturn_t *self,
                                const bson_t *result,
                                size_t ops_doc_offset,
-                               const mongoc_array_t *arrayof_modeldata)
+                               const mongoc_array_t *arrayof_modeldata,
+                               const mongoc_buffer_t *ops)
 {
    BSON_ASSERT_PARAM (self);
    BSON_ASSERT_PARAM (result);
@@ -1361,17 +1363,17 @@ _bulkwritereturn_apply_result (mongoc_bulkwritereturn_t *self,
          return false;
       }
       if (idx < 0) {
-         bson_set_error (&error,
-                         MONGOC_ERROR_COMMAND,
-                         MONGOC_ERROR_COMMAND_INVALID_ARG,
-                         "expected to find non-negative int64 `idx` in "
-                         "result, but did not");
+         _mongoc_set_error (&error,
+                            MONGOC_ERROR_COMMAND,
+                            MONGOC_ERROR_COMMAND_INVALID_ARG,
+                            "expected to find non-negative int64 `idx` in "
+                            "result, but did not");
          _bulkwriteexception_set_error (self->exc, &error);
          return false;
       }
    }
 
-   BSON_ASSERT (mcommon_in_range_size_t_signed (idx));
+   BSON_ASSERT (mlib_in_range (size_t, idx));
    // `models_idx` is the index of the model that produced this result.
    size_t models_idx = (size_t) idx + ops_doc_offset;
    if (ok == 0) {
@@ -1433,11 +1435,11 @@ _bulkwritereturn_apply_result (mongoc_bulkwritereturn_t *self,
          if (bson_iter_init_find (&result_iter, result, "upserted")) {
             BSON_ASSERT (bson_iter_init (&result_iter, result));
             if (!bson_iter_find_descendant (&result_iter, "upserted._id", &id_iter)) {
-               bson_set_error (&error,
-                               MONGOC_ERROR_COMMAND,
-                               MONGOC_ERROR_COMMAND_INVALID_ARG,
-                               "expected `upserted` to be a document "
-                               "containing `_id`, but did not find `_id`");
+               _mongoc_set_error (&error,
+                                  MONGOC_ERROR_COMMAND,
+                                  MONGOC_ERROR_COMMAND_INVALID_ARG,
+                                  "expected `upserted` to be a document "
+                                  "containing `_id`, but did not find `_id`");
                _bulkwriteexception_set_error (self->exc, &error);
                return false;
             }
@@ -1458,7 +1460,10 @@ _bulkwritereturn_apply_result (mongoc_bulkwritereturn_t *self,
          break;
       }
       case MODEL_OP_INSERT: {
-         _bulkwriteresult_set_insertresult (self->res, &md->id_iter, models_idx);
+         bson_iter_t id_iter;
+         BSON_ASSERT (bson_iter_init_from_data_at_offset (
+            &id_iter, ops->data + md->id_loc.op_start, md->id_loc.op_len, md->id_loc.id_offset, strlen ("_id")));
+         _bulkwriteresult_set_insertresult (self->res, &id_iter, models_idx);
          break;
       }
       default:
@@ -1527,33 +1532,33 @@ mongoc_bulkwrite_execute (mongoc_bulkwrite_t *self, const mongoc_bulkwriteopts_t
    ret.exc = _bulkwriteexception_new ();
 
    if (!self->client) {
-      bson_set_error (&error,
-                      MONGOC_ERROR_COMMAND,
-                      MONGOC_ERROR_COMMAND_INVALID_ARG,
-                      "bulk write requires a client and one has not been set");
+      _mongoc_set_error (&error,
+                         MONGOC_ERROR_COMMAND,
+                         MONGOC_ERROR_COMMAND_INVALID_ARG,
+                         "bulk write requires a client and one has not been set");
       _bulkwriteexception_set_error (ret.exc, &error);
       goto fail;
    }
 
    if (self->executed) {
-      bson_set_error (&error, MONGOC_ERROR_COMMAND, MONGOC_ERROR_COMMAND_INVALID_ARG, "bulk write already executed");
+      _mongoc_set_error (&error, MONGOC_ERROR_COMMAND, MONGOC_ERROR_COMMAND_INVALID_ARG, "bulk write already executed");
       _bulkwriteexception_set_error (ret.exc, &error);
       goto fail;
    }
    self->executed = true;
 
    if (self->n_ops == 0) {
-      bson_set_error (
+      _mongoc_set_error (
          &error, MONGOC_ERROR_COMMAND, MONGOC_ERROR_COMMAND_INVALID_ARG, "cannot do `bulkWrite` with no models");
       _bulkwriteexception_set_error (ret.exc, &error);
       goto fail;
    }
 
    if (_mongoc_cse_is_enabled (self->client)) {
-      bson_set_error (&error,
-                      MONGOC_ERROR_COMMAND,
-                      MONGOC_ERROR_COMMAND_INVALID_ARG,
-                      "bulkWrite does not currently support automatic encryption");
+      _mongoc_set_error (&error,
+                         MONGOC_ERROR_COMMAND,
+                         MONGOC_ERROR_COMMAND_INVALID_ARG,
+                         "bulkWrite does not currently support automatic encryption");
       _bulkwriteexception_set_error (ret.exc, &error);
       goto fail;
    }
@@ -1632,10 +1637,10 @@ mongoc_bulkwrite_execute (mongoc_bulkwrite_t *self, const mongoc_bulkwriteopts_t
          const mongoc_write_concern_t *wc = self->client->write_concern; // Default to client.
          if (opts->writeconcern) {
             if (_mongoc_client_session_in_txn (self->session)) {
-               bson_set_error (&error,
-                               MONGOC_ERROR_COMMAND,
-                               MONGOC_ERROR_COMMAND_INVALID_ARG,
-                               "Cannot set write concern after starting a transaction.");
+               _mongoc_set_error (&error,
+                                  MONGOC_ERROR_COMMAND,
+                                  MONGOC_ERROR_COMMAND_INVALID_ARG,
+                                  "Cannot set write concern after starting a transaction.");
                _bulkwriteexception_set_error (ret.exc, &error);
                goto fail;
             }
@@ -1645,15 +1650,14 @@ mongoc_bulkwrite_execute (mongoc_bulkwrite_t *self, const mongoc_bulkwriteopts_t
             _bulkwriteexception_set_error (ret.exc, &error);
             goto fail;
          }
-         if (!mongoc_write_concern_is_acknowledged (wc) &&
-             mcommon_cmp_greater_us (self->max_insert_len, maxBsonObjectSize)) {
-            bson_set_error (&error,
-                            MONGOC_ERROR_COMMAND,
-                            MONGOC_ERROR_COMMAND_INVALID_ARG,
-                            "Unacknowledged `bulkWrite` includes insert of size: %" PRIu32
-                            ", exceeding maxBsonObjectSize: %" PRId32,
-                            self->max_insert_len,
-                            maxBsonObjectSize);
+         if (!mongoc_write_concern_is_acknowledged (wc) && mlib_cmp (self->max_insert_len, >, maxBsonObjectSize)) {
+            _mongoc_set_error (&error,
+                               MONGOC_ERROR_COMMAND,
+                               MONGOC_ERROR_COMMAND_INVALID_ARG,
+                               "Unacknowledged `bulkWrite` includes insert of size: %" PRIu32
+                               ", exceeding maxBsonObjectSize: %" PRId32,
+                               self->max_insert_len,
+                               maxBsonObjectSize);
             _bulkwriteexception_set_error (ret.exc, &error);
             goto fail;
          }
@@ -1661,19 +1665,19 @@ mongoc_bulkwrite_execute (mongoc_bulkwrite_t *self, const mongoc_bulkwriteopts_t
       }
 
       if (verboseresults && !is_acknowledged) {
-         bson_set_error (&error,
-                         MONGOC_ERROR_COMMAND,
-                         MONGOC_ERROR_COMMAND_INVALID_ARG,
-                         "Cannot request unacknowledged write concern and verbose results.");
+         _mongoc_set_error (&error,
+                            MONGOC_ERROR_COMMAND,
+                            MONGOC_ERROR_COMMAND_INVALID_ARG,
+                            "Cannot request unacknowledged write concern and verbose results.");
          _bulkwriteexception_set_error (ret.exc, &error);
          goto fail;
       }
 
       if (is_ordered && !is_acknowledged) {
-         bson_set_error (&error,
-                         MONGOC_ERROR_COMMAND,
-                         MONGOC_ERROR_COMMAND_INVALID_ARG,
-                         "Cannot request unacknowledged write concern and ordered writes.");
+         _mongoc_set_error (&error,
+                            MONGOC_ERROR_COMMAND,
+                            MONGOC_ERROR_COMMAND_INVALID_ARG,
+                            "Cannot request unacknowledged write concern and ordered writes.");
          _bulkwriteexception_set_error (ret.exc, &error);
          goto fail;
       }
@@ -1705,9 +1709,9 @@ mongoc_bulkwrite_execute (mongoc_bulkwrite_t *self, const mongoc_bulkwriteopts_t
       bool batch_ok = false;
       bson_t cmd_reply = BSON_INITIALIZER;
       mongoc_cursor_t *reply_cursor = NULL;
-      // `ops_byte_len` is the number of documents from `ops` to send in this batch.
+      // `ops_byte_len` is the number of bytes from `ops` to send in this batch.
       size_t ops_byte_len = 0;
-      // `ops_doc_len` is the number of bytes from `ops` to send in this batch.
+      // `ops_doc_len` is the number of documents from `ops` to send in this batch.
       size_t ops_doc_len = 0;
 
       if (ops_byte_offset == self->ops.len) {
@@ -1749,13 +1753,13 @@ mongoc_bulkwrite_execute (mongoc_bulkwrite_t *self, const mongoc_bulkwriteopts_t
          if (opmsg_overhead + ops_byte_len + doc_len + nsinfo_bson_size > maxMessageSizeBytes) {
             if (ops_byte_len == 0) {
                // Could not even fit one document within an OP_MSG.
-               bson_set_error (&error,
-                               MONGOC_ERROR_COMMAND,
-                               MONGOC_ERROR_COMMAND_INVALID_ARG,
-                               "unable to send document at index %zu. Sending "
-                               "would exceed maxMessageSizeBytes=%" PRId32,
-                               ops_doc_len,
-                               maxMessageSizeBytes);
+               _mongoc_set_error (&error,
+                                  MONGOC_ERROR_COMMAND,
+                                  MONGOC_ERROR_COMMAND_INVALID_ARG,
+                                  "unable to send document at index %zu. Sending "
+                                  "would exceed maxMessageSizeBytes=%" PRId32,
+                                  ops_doc_len,
+                                  maxMessageSizeBytes);
                _bulkwriteexception_set_error (ret.exc, &error);
                goto batch_fail;
             }
@@ -1798,7 +1802,7 @@ mongoc_bulkwrite_execute (mongoc_bulkwrite_t *self, const mongoc_bulkwriteopts_t
             mongoc_cmd_payload_t *payload = &parts.assembled.payloads[0];
             const mongoc_buffer_t *nsinfo_docseq = mcd_nsinfo_as_document_sequence (nsinfo);
             payload->documents = nsinfo_docseq->data;
-            BSON_ASSERT (mcommon_in_range_int32_t_unsigned (nsinfo_docseq->len));
+            BSON_ASSERT (mlib_in_range (int32_t, nsinfo_docseq->len));
             payload->size = (int32_t) nsinfo_docseq->len;
             payload->identifier = "nsInfo";
          }
@@ -1808,7 +1812,7 @@ mongoc_bulkwrite_execute (mongoc_bulkwrite_t *self, const mongoc_bulkwriteopts_t
             mongoc_cmd_payload_t *payload = &parts.assembled.payloads[1];
             payload->identifier = "ops";
             payload->documents = self->ops.data + ops_byte_offset;
-            BSON_ASSERT (mcommon_in_range_int32_t_unsigned (ops_byte_len));
+            BSON_ASSERT (mlib_in_range (int32_t, ops_byte_len));
             payload->size = (int32_t) ops_byte_len;
          }
 
@@ -1870,7 +1874,7 @@ mongoc_bulkwrite_execute (mongoc_bulkwrite_t *self, const mongoc_bulkwriteopts_t
                bson_t cursor_opts = BSON_INITIALIZER;
                {
                   uint32_t serverid = parts.assembled.server_stream->sd->id;
-                  BSON_ASSERT (mcommon_in_range_int32_t_unsigned (serverid));
+                  BSON_ASSERT (mlib_in_range (int32_t, serverid));
                   int32_t serverid_i32 = (int32_t) serverid;
                   BSON_ASSERT (BSON_APPEND_INT32 (&cursor_opts, "serverId", serverid_i32));
                   // Use same session if one was applied.
@@ -1903,7 +1907,8 @@ mongoc_bulkwrite_execute (mongoc_bulkwrite_t *self, const mongoc_bulkwriteopts_t
                // Iterate over cursor results.
                const bson_t *result;
                while (mongoc_cursor_next (reply_cursor, &result)) {
-                  if (!_bulkwritereturn_apply_result (&ret, result, ops_doc_offset, &self->arrayof_modeldata)) {
+                  if (!_bulkwritereturn_apply_result (
+                         &ret, result, ops_doc_offset, &self->arrayof_modeldata, &self->ops)) {
                      goto batch_fail;
                   }
                }
@@ -1947,7 +1952,7 @@ fail:
          has_successful_results = true;
       }
    } else {
-      BSON_ASSERT (mcommon_in_range_size_t_signed (ret.res->errorscount));
+      BSON_ASSERT (mlib_in_range (size_t, ret.res->errorscount));
       size_t errorscount_sz = (size_t) ret.res->errorscount;
       if (errorscount_sz < self->n_ops) {
          has_successful_results = true;

@@ -22,7 +22,6 @@
 #include <common-string-private.h>
 #include <common-json-private.h>
 #include <bson/bson-iso8601-private.h>
-#include <common-cmp-private.h>
 
 #include <string.h>
 #include <math.h>
@@ -2971,7 +2970,12 @@ bson_append_array_builder_begin (bson_t *bson, const char *key, int key_length, 
    BSON_ASSERT_PARAM (key);
    BSON_ASSERT_PARAM (child);
    *child = bson_array_builder_new ();
-   return bson_append_array_begin (bson, key, key_length, &(*child)->bson);
+   bool ok = bson_append_array_begin (bson, key, key_length, &(*child)->bson);
+   if (!ok) {
+      bson_array_builder_destroy (*child);
+      *child = NULL;
+   }
+   return ok;
 }
 
 bool

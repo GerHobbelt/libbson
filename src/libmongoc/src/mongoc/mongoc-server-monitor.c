@@ -26,6 +26,7 @@
 #include <mongoc/mongoc-topology-background-monitoring-private.h>
 #include <mongoc/mongoc-topology-private.h>
 #include <mongoc/mongoc-trace-private.h>
+#include <mongoc/mongoc-structured-log-private.h>
 #include <common-atomic-private.h>
 
 #include <inttypes.h>
@@ -83,8 +84,6 @@ struct _mongoc_server_monitor_t {
    mongoc_stream_initiator_t initiator;
    void *initiator_context;
    int32_t request_id;
-   mongoc_apm_callbacks_t apm_callbacks;
-   void *apm_context;
 
    mongoc_stream_t *stream;
    bool more_to_come;
@@ -131,19 +130,37 @@ static void
 _server_monitor_heartbeat_started (mongoc_server_monitor_t *server_monitor, bool awaited)
 {
    mongoc_apm_server_heartbeat_started_t event;
-   MONGOC_DEBUG_ASSERT (!mcommon_mutex_is_locked (&server_monitor->topology->apm_mutex));
+   mongoc_log_and_monitor_instance_t *log_and_monitor = &server_monitor->topology->log_and_monitor;
 
-   if (!server_monitor->apm_callbacks.server_heartbeat_started) {
+   {
+      mc_shared_tpld td = mc_tpld_take_ref (BSON_ASSERT_PTR_INLINE (server_monitor)->topology);
+      bson_oid_t topology_id;
+      bson_oid_copy (&td.ptr->topology_id, &topology_id);
+      mc_tpld_drop_ref (&td);
+
+      mongoc_structured_log (
+         log_and_monitor->structured_log,
+         MONGOC_STRUCTURED_LOG_LEVEL_DEBUG,
+         MONGOC_STRUCTURED_LOG_COMPONENT_TOPOLOGY,
+         "Server heartbeat started",
+         oid ("topologyId", &topology_id),
+         server_description (server_monitor->description, SERVER_HOST, SERVER_PORT, SERVER_CONNECTION_ID),
+         boolean ("awaited", awaited));
+   }
+
+   MONGOC_DEBUG_ASSERT (!mcommon_mutex_is_locked (&log_and_monitor->apm_mutex));
+
+   if (!log_and_monitor->apm_callbacks.server_heartbeat_started) {
       return;
    }
 
    event.host = &server_monitor->description->host;
-   event.context = server_monitor->apm_context;
+   event.context = log_and_monitor->apm_context;
    MONITOR_LOG (server_monitor, "%s heartbeat started", awaited ? "awaitable" : "regular");
    event.awaited = awaited;
-   bson_mutex_lock (&server_monitor->topology->apm_mutex);
-   server_monitor->apm_callbacks.server_heartbeat_started (&event);
-   bson_mutex_unlock (&server_monitor->topology->apm_mutex);
+   bson_mutex_lock (&log_and_monitor->apm_mutex);
+   log_and_monitor->apm_callbacks.server_heartbeat_started (&event);
+   bson_mutex_unlock (&log_and_monitor->apm_mutex);
 }
 
 static void
@@ -153,20 +170,39 @@ _server_monitor_heartbeat_succeeded (mongoc_server_monitor_t *server_monitor,
                                      bool awaited)
 {
    mongoc_apm_server_heartbeat_succeeded_t event;
+   mongoc_log_and_monitor_instance_t *log_and_monitor = &server_monitor->topology->log_and_monitor;
 
-   if (!server_monitor->apm_callbacks.server_heartbeat_succeeded) {
+   {
+      mc_shared_tpld td = mc_tpld_take_ref (BSON_ASSERT_PTR_INLINE (server_monitor)->topology);
+      bson_oid_t topology_id;
+      bson_oid_copy (&td.ptr->topology_id, &topology_id);
+      mc_tpld_drop_ref (&td);
+
+      mongoc_structured_log (
+         log_and_monitor->structured_log,
+         MONGOC_STRUCTURED_LOG_LEVEL_DEBUG,
+         MONGOC_STRUCTURED_LOG_COMPONENT_TOPOLOGY,
+         "Server heartbeat succeeded",
+         oid ("topologyId", &topology_id),
+         server_description (server_monitor->description, SERVER_HOST, SERVER_PORT, SERVER_CONNECTION_ID),
+         boolean ("awaited", awaited),
+         monotonic_time_duration (duration_usec),
+         bson_as_json ("reply", reply));
+   }
+
+   if (!log_and_monitor->apm_callbacks.server_heartbeat_succeeded) {
       return;
    }
 
    event.host = &server_monitor->description->host;
-   event.context = server_monitor->apm_context;
+   event.context = log_and_monitor->apm_context;
    event.reply = reply;
    event.duration_usec = duration_usec;
    MONITOR_LOG (server_monitor, "%s heartbeat succeeded", awaited ? "awaitable" : "regular");
    event.awaited = awaited;
-   bson_mutex_lock (&server_monitor->topology->apm_mutex);
-   server_monitor->apm_callbacks.server_heartbeat_succeeded (&event);
-   bson_mutex_unlock (&server_monitor->topology->apm_mutex);
+   bson_mutex_lock (&log_and_monitor->apm_mutex);
+   log_and_monitor->apm_callbacks.server_heartbeat_succeeded (&event);
+   bson_mutex_unlock (&log_and_monitor->apm_mutex);
 }
 
 static void
@@ -176,20 +212,39 @@ _server_monitor_heartbeat_failed (mongoc_server_monitor_t *server_monitor,
                                   bool awaited)
 {
    mongoc_apm_server_heartbeat_failed_t event;
+   mongoc_log_and_monitor_instance_t *log_and_monitor = &server_monitor->topology->log_and_monitor;
 
-   if (!server_monitor->apm_callbacks.server_heartbeat_failed) {
+   {
+      mc_shared_tpld td = mc_tpld_take_ref (BSON_ASSERT_PTR_INLINE (server_monitor)->topology);
+      bson_oid_t topology_id;
+      bson_oid_copy (&td.ptr->topology_id, &topology_id);
+      mc_tpld_drop_ref (&td);
+
+      mongoc_structured_log (
+         log_and_monitor->structured_log,
+         MONGOC_STRUCTURED_LOG_LEVEL_DEBUG,
+         MONGOC_STRUCTURED_LOG_COMPONENT_TOPOLOGY,
+         "Server heartbeat failed",
+         oid ("topologyId", &topology_id),
+         server_description (server_monitor->description, SERVER_HOST, SERVER_PORT, SERVER_CONNECTION_ID),
+         boolean ("awaited", awaited),
+         monotonic_time_duration (duration_usec),
+         error ("failure", error));
+   }
+
+   if (!log_and_monitor->apm_callbacks.server_heartbeat_failed) {
       return;
    }
 
    event.host = &server_monitor->description->host;
-   event.context = server_monitor->apm_context;
+   event.context = log_and_monitor->apm_context;
    event.error = error;
    event.duration_usec = duration_usec;
    MONITOR_LOG (server_monitor, "%s heartbeat failed", awaited ? "awaitable" : "regular");
    event.awaited = awaited;
-   bson_mutex_lock (&server_monitor->topology->apm_mutex);
-   server_monitor->apm_callbacks.server_heartbeat_failed (&event);
-   bson_mutex_unlock (&server_monitor->topology->apm_mutex);
+   bson_mutex_lock (&log_and_monitor->apm_mutex);
+   log_and_monitor->apm_callbacks.server_heartbeat_failed (&event);
+   bson_mutex_unlock (&log_and_monitor->apm_mutex);
 }
 
 static void
@@ -268,10 +323,10 @@ _server_monitor_send_and_recv_hello_opmsg (mongoc_server_monitor_t *server_monit
    const int32_t message_header_length = 4u * sizeof (int32_t);
 
    if (message_length < message_header_length) {
-      bson_set_error (error,
-                      MONGOC_ERROR_PROTOCOL,
-                      MONGOC_ERROR_PROTOCOL_INVALID_REPLY,
-                      "invalid reply from server: message length");
+      _mongoc_set_error (error,
+                         MONGOC_ERROR_PROTOCOL,
+                         MONGOC_ERROR_PROTOCOL_INVALID_REPLY,
+                         "invalid reply from server: message length");
       goto fail;
    }
 
@@ -284,29 +339,29 @@ _server_monitor_send_and_recv_hello_opmsg (mongoc_server_monitor_t *server_monit
 
    mcd_rpc_message_reset (rpc);
    if (!mcd_rpc_message_from_data_in_place (rpc, buffer.data, buffer.len, NULL)) {
-      bson_set_error (error,
-                      MONGOC_ERROR_PROTOCOL,
-                      MONGOC_ERROR_PROTOCOL_INVALID_REPLY,
-                      "invalid reply from server: malformed message");
+      _mongoc_set_error (error,
+                         MONGOC_ERROR_PROTOCOL,
+                         MONGOC_ERROR_PROTOCOL_INVALID_REPLY,
+                         "invalid reply from server: malformed message");
       goto fail;
    }
 
    mcd_rpc_message_ingress (rpc);
 
    if (!mcd_rpc_message_decompress_if_necessary (rpc, &decompressed_data, &decompressed_data_len)) {
-      bson_set_error (error,
-                      MONGOC_ERROR_PROTOCOL,
-                      MONGOC_ERROR_PROTOCOL_INVALID_REPLY,
-                      "invalid reply from server: decompression failure");
+      _mongoc_set_error (error,
+                         MONGOC_ERROR_PROTOCOL,
+                         MONGOC_ERROR_PROTOCOL_INVALID_REPLY,
+                         "invalid reply from server: decompression failure");
       goto fail;
    }
 
    bson_t body;
    if (!mcd_rpc_message_get_body (rpc, &body)) {
-      bson_set_error (error,
-                      MONGOC_ERROR_PROTOCOL,
-                      MONGOC_ERROR_PROTOCOL_INVALID_REPLY,
-                      "invalid reply from server: malformed body");
+      _mongoc_set_error (error,
+                         MONGOC_ERROR_PROTOCOL,
+                         MONGOC_ERROR_PROTOCOL_INVALID_REPLY,
+                         "invalid reply from server: malformed body");
       goto fail;
    }
 
@@ -381,10 +436,10 @@ _server_monitor_send_and_recv_opquery (mongoc_server_monitor_t *server_monitor,
    const int32_t message_header_length = 4u * sizeof (int32_t);
 
    if (message_length < message_header_length) {
-      bson_set_error (error,
-                      MONGOC_ERROR_PROTOCOL,
-                      MONGOC_ERROR_PROTOCOL_INVALID_REPLY,
-                      "invalid reply from server: message length");
+      _mongoc_set_error (error,
+                         MONGOC_ERROR_PROTOCOL,
+                         MONGOC_ERROR_PROTOCOL_INVALID_REPLY,
+                         "invalid reply from server: message length");
       goto fail;
    }
 
@@ -397,29 +452,29 @@ _server_monitor_send_and_recv_opquery (mongoc_server_monitor_t *server_monitor,
 
    mcd_rpc_message_reset (rpc);
    if (!mcd_rpc_message_from_data_in_place (rpc, buffer.data, buffer.len, NULL)) {
-      bson_set_error (error,
-                      MONGOC_ERROR_PROTOCOL,
-                      MONGOC_ERROR_PROTOCOL_INVALID_REPLY,
-                      "invalid reply from server: malformed message");
+      _mongoc_set_error (error,
+                         MONGOC_ERROR_PROTOCOL,
+                         MONGOC_ERROR_PROTOCOL_INVALID_REPLY,
+                         "invalid reply from server: malformed message");
       goto fail;
    }
 
    mcd_rpc_message_ingress (rpc);
 
    if (!mcd_rpc_message_decompress_if_necessary (rpc, &decompressed_data, &decompressed_data_len)) {
-      bson_set_error (error,
-                      MONGOC_ERROR_PROTOCOL,
-                      MONGOC_ERROR_PROTOCOL_INVALID_REPLY,
-                      "invalid reply from server: decompression failure");
+      _mongoc_set_error (error,
+                         MONGOC_ERROR_PROTOCOL,
+                         MONGOC_ERROR_PROTOCOL_INVALID_REPLY,
+                         "invalid reply from server: decompression failure");
       goto fail;
    }
 
    bson_t body;
    if (!mcd_rpc_message_get_body (rpc, &body)) {
-      bson_set_error (error,
-                      MONGOC_ERROR_PROTOCOL,
-                      MONGOC_ERROR_PROTOCOL_INVALID_REPLY,
-                      "invalid reply from server: malformed body");
+      _mongoc_set_error (error,
+                         MONGOC_ERROR_PROTOCOL,
+                         MONGOC_ERROR_PROTOCOL_INVALID_REPLY,
+                         "invalid reply from server: malformed body");
       goto fail;
    }
 
@@ -553,12 +608,12 @@ _server_monitor_poll_with_interrupt (mongoc_server_monitor_t *server_monitor,
       ret = mongoc_stream_poll (poller, 1, (int32_t) BSON_MIN (timeleft_ms, monitor_tick_ms));
       if (ret == -1) {
          MONITOR_LOG (server_monitor, "mongoc_stream_poll error");
-         bson_set_error (error, MONGOC_ERROR_STREAM, MONGOC_ERROR_STREAM_SOCKET, "poll error");
+         _mongoc_set_error (error, MONGOC_ERROR_STREAM, MONGOC_ERROR_STREAM_SOCKET, "poll error");
          return false;
       }
 
       if (poller[0].revents & (POLLERR | POLLHUP)) {
-         bson_set_error (error, MONGOC_ERROR_STREAM, MONGOC_ERROR_STREAM_SOCKET, "connection closed while polling");
+         _mongoc_set_error (error, MONGOC_ERROR_STREAM, MONGOC_ERROR_STREAM_SOCKET, "connection closed while polling");
          return false;
       }
 
@@ -578,7 +633,7 @@ _server_monitor_poll_with_interrupt (mongoc_server_monitor_t *server_monitor,
          return true;
       }
    }
-   bson_set_error (error, MONGOC_ERROR_STREAM, MONGOC_ERROR_STREAM_SOCKET, "connection timeout while polling");
+   _mongoc_set_error (error, MONGOC_ERROR_STREAM, MONGOC_ERROR_STREAM_SOCKET, "connection timeout while polling");
    return false;
 }
 
@@ -594,7 +649,7 @@ _get_timeout_ms (int64_t expire_at_ms, bson_error_t *error)
 
    timeout_ms = expire_at_ms - _now_ms ();
    if (timeout_ms <= 0) {
-      bson_set_error (
+      _mongoc_set_error (
          error, MONGOC_ERROR_STREAM, MONGOC_ERROR_STREAM_SOCKET, "connection timed out reading message length");
       return 0;
    }
@@ -650,12 +705,12 @@ _server_monitor_awaitable_hello_recv (mongoc_server_monitor_t *server_monitor,
    const int32_t message_header_length = 4u * sizeof (int32_t);
 
    if ((message_length < message_header_length) || (message_length > server_monitor->description->max_msg_size)) {
-      bson_set_error (error,
-                      MONGOC_ERROR_PROTOCOL,
-                      MONGOC_ERROR_PROTOCOL_INVALID_REPLY,
-                      "message size %" PRId32 " is not within expected range 16-%" PRId32 " bytes",
-                      message_length,
-                      server_monitor->description->max_msg_size);
+      _mongoc_set_error (error,
+                         MONGOC_ERROR_PROTOCOL,
+                         MONGOC_ERROR_PROTOCOL_INVALID_REPLY,
+                         "message size %" PRId32 " is not within expected range 16-%" PRId32 " bytes",
+                         message_length,
+                         server_monitor->description->max_msg_size);
       GOTO (fail);
    }
 
@@ -672,7 +727,7 @@ _server_monitor_awaitable_hello_recv (mongoc_server_monitor_t *server_monitor,
    }
 
    if (!mcd_rpc_message_from_data_in_place (rpc, buffer.data, buffer.len, NULL)) {
-      bson_set_error (
+      _mongoc_set_error (
          error, MONGOC_ERROR_PROTOCOL, MONGOC_ERROR_PROTOCOL_INVALID_REPLY, "malformed message from server");
       GOTO (fail);
    }
@@ -680,13 +735,13 @@ _server_monitor_awaitable_hello_recv (mongoc_server_monitor_t *server_monitor,
    mcd_rpc_message_ingress (rpc);
 
    if (!mcd_rpc_message_decompress_if_necessary (rpc, &decompressed_data, &decompressed_data_len)) {
-      bson_set_error (error, MONGOC_ERROR_PROTOCOL, MONGOC_ERROR_PROTOCOL_INVALID_REPLY, "decompression failure");
+      _mongoc_set_error (error, MONGOC_ERROR_PROTOCOL, MONGOC_ERROR_PROTOCOL_INVALID_REPLY, "decompression failure");
       GOTO (fail);
    }
 
    bson_t body;
    if (!mcd_rpc_message_get_body (rpc, &body)) {
-      bson_set_error (
+      _mongoc_set_error (
          error, MONGOC_ERROR_PROTOCOL, MONGOC_ERROR_PROTOCOL_INVALID_REPLY, "malformed BSON payload from server");
       GOTO (fail);
    }
@@ -784,8 +839,12 @@ _update_topology_description (mongoc_server_monitor_t *server_monitor, mongoc_se
    bson_mutex_lock (&server_monitor->shared.mutex);
    server_monitor->shared.scan_requested = false;
    bson_mutex_unlock (&server_monitor->shared.mutex);
-   mongoc_topology_description_handle_hello (
-      tdmod.new_td, server_monitor->server_id, hello_response, description->round_trip_time_msec, &description->error);
+   mongoc_topology_description_handle_hello (tdmod.new_td,
+                                             &topology->log_and_monitor,
+                                             server_monitor->server_id,
+                                             hello_response,
+                                             description->round_trip_time_msec,
+                                             &description->error);
    /* Reconcile server monitors. */
    _mongoc_topology_background_monitoring_reconcile (topology, tdmod.new_td);
    /* Wake threads performing server selection. */
@@ -838,8 +897,6 @@ mongoc_server_monitor_new (mongoc_topology_t *topology,
       _mongoc_ssl_opts_copy_to (topology->scanner->ssl_opts, server_monitor->ssl_opts, true);
    }
 #endif
-   memcpy (&server_monitor->apm_callbacks, &td->apm_callbacks, sizeof (mongoc_apm_callbacks_t));
-   server_monitor->apm_context = td->apm_context;
    server_monitor->initiator = topology->scanner->initiator;
    server_monitor->initiator_context = topology->scanner->initiator_context;
    server_monitor->mode = _server_monitor_get_mode_enum (server_monitor);

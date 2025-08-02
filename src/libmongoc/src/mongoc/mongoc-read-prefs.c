@@ -15,10 +15,10 @@
  */
 
 
-#include <mongoc/mongoc-error.h>
+#include <mongoc/mongoc-error-private.h>
 #include <mongoc/mongoc-read-prefs-private.h>
 #include <mongoc/mongoc-trace-private.h>
-#include <common-cmp-private.h>
+#include <mlib/cmp.h>
 
 
 mongoc_read_prefs_t *
@@ -88,7 +88,7 @@ mongoc_read_prefs_add_tag (mongoc_read_prefs_t *read_prefs, const bson_t *tag)
    key = bson_count_keys (&read_prefs->tags);
    // Expect no truncation.
    int req = bson_snprintf (str, sizeof str, "%d", key);
-   BSON_ASSERT (mcommon_cmp_less_su (req, sizeof str));
+   BSON_ASSERT (mlib_cmp (req, <, sizeof str));
 
    if (tag) {
       bson_append_document (&read_prefs->tags, str, -1, tag);
@@ -434,7 +434,7 @@ bool
 _mongoc_read_prefs_validate (const mongoc_read_prefs_t *read_prefs, bson_error_t *error)
 {
    if (read_prefs && !mongoc_read_prefs_is_valid (read_prefs)) {
-      bson_set_error (error, MONGOC_ERROR_COMMAND, MONGOC_ERROR_COMMAND_INVALID_ARG, "Invalid mongoc_read_prefs_t");
+      _mongoc_set_error (error, MONGOC_ERROR_COMMAND, MONGOC_ERROR_COMMAND_INVALID_ARG, "Invalid mongoc_read_prefs_t");
       return false;
    }
    return true;
