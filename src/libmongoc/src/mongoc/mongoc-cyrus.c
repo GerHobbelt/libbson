@@ -25,7 +25,8 @@
 #include "mongoc-util-private.h"
 #include "mongoc-trace-private.h"
 #include "common-b64-private.h"
-#include <mcd-string.h>
+#include <common-string-private.h>
+#include <common-cmp-private.h>
 
 #undef MONGOC_LOG_DOMAIN
 #define MONGOC_LOG_DOMAIN "CYRUS-SASL"
@@ -33,7 +34,7 @@
 bool
 _mongoc_cyrus_set_mechanism (mongoc_cyrus_t *sasl, const char *mechanism, bson_error_t *error)
 {
-   mcd_string_t *str = mcd_string_new ("");
+   mcommon_string_t *str = mcommon_string_new ("");
    const char **mechs = sasl_global_listmech ();
    int i = 0;
    bool ok = false;
@@ -45,9 +46,9 @@ _mongoc_cyrus_set_mechanism (mongoc_cyrus_t *sasl, const char *mechanism, bson_e
          ok = true;
          break;
       }
-      mcd_string_append (str, mechs[i]);
+      mcommon_string_append (str, mechs[i]);
       if (mechs[i + 1]) {
-         mcd_string_append (str, ",");
+         mcommon_string_append (str, ",");
       }
    }
 
@@ -64,7 +65,7 @@ _mongoc_cyrus_set_mechanism (mongoc_cyrus_t *sasl, const char *mechanism, bson_e
                       str->str);
    }
 
-   mcd_string_free (str, true);
+   mcommon_string_free (str, true);
    return ok;
 }
 
@@ -275,19 +276,19 @@ _mongoc_cyrus_is_failure (int status, bson_error_t *error)
          bson_set_error (error, MONGOC_ERROR_SASL, status, "SASL Failure: insufficient memory.");
          break;
       case SASL_NOMECH: {
-         mcd_string_t *str = mcd_string_new ("available mechanisms: ");
+         mcommon_string_t *str = mcommon_string_new ("available mechanisms: ");
          const char **mechs = sasl_global_listmech ();
          int i = 0;
 
          for (i = 0; mechs[i]; i++) {
-            mcd_string_append (str, mechs[i]);
+            mcommon_string_append (str, mechs[i]);
             if (mechs[i + 1]) {
-               mcd_string_append (str, ",");
+               mcommon_string_append (str, ",");
             }
          }
          bson_set_error (
             error, MONGOC_ERROR_SASL, status, "SASL Failure: failure to negotiate mechanism (%s)", str->str);
-         mcd_string_free (str, 0);
+         mcommon_string_free (str, 0);
       } break;
       case SASL_BADPARAM:
          bson_set_error (error,
@@ -356,7 +357,7 @@ _mongoc_cyrus_start (mongoc_cyrus_t *sasl, uint8_t **outbuf, uint32_t *outbuflen
          error, MONGOC_ERROR_SASL, MONGOC_ERROR_CLIENT_AUTHENTICATE, "Unable to base64 encode client SASL message");
       return false;
    } else {
-      BSON_ASSERT (bson_in_range_signed (uint32_t, b64_ret));
+      BSON_ASSERT (mcommon_in_range_signed (uint32_t, b64_ret));
       *outbuflen = (uint32_t) b64_ret;
    }
 
@@ -446,7 +447,7 @@ _mongoc_cyrus_step (mongoc_cyrus_t *sasl,
       } else {
          /* Set the output length to the number of characters written excluding
           * the NULL. */
-         BSON_ASSERT (bson_in_range_signed (uint32_t, b64_ret));
+         BSON_ASSERT (mcommon_in_range_signed (uint32_t, b64_ret));
          *outbuflen = (uint32_t) b64_ret;
       }
    }
