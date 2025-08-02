@@ -57,11 +57,33 @@ _aligned_alloc_impl (size_t alignment, size_t num_bytes)
 }
 #endif
 
+// fix warning C4232: nonstandard extension used: 'malloc': address of dllimport 'malloc' is not static, identity not guaranteed
+// ...etc...
+static void *
+my_malloc (size_t len)
+{
+   return malloc (len);
+}
+static void *
+my_calloc (size_t el_w, size_t len)
+{
+   return calloc (el_w, len);
+}
+static void *
+my_realloc (void *ptr, size_t len)
+{
+   return realloc (ptr, len);
+}
+static void
+my_free (void *ptr)
+{
+   free(ptr);
+}
 
-static bson_mem_vtable_t gMemVtable = {.malloc = malloc,
-                                       .calloc = calloc,
-                                       .realloc = realloc,
-                                       .free = free,
+static bson_mem_vtable_t gMemVtable = {.malloc = my_malloc,
+                                       .calloc = my_calloc,
+                                       .realloc = my_realloc,
+                                       .free = my_free,
                                        .aligned_alloc = _aligned_alloc_impl,
                                        .padding = {0}};
 
