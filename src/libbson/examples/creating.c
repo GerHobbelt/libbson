@@ -13,8 +13,9 @@
  * limitations under the License.
  */
 
-#include <stdio.h>
 #include <bson/bson.h>
+
+#include <stdio.h>
 
 #if defined(BUILD_MONOLITHIC)
 #define main bson_creating_example_main

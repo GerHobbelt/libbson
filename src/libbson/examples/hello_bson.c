@@ -14,8 +14,10 @@
  */
 
 /* -- sphinx-include-start -- */
-#include <stdio.h>
 #include <bson/bson.h>
+
+#include <stdio.h>
+
 
 #if defined(BUILD_MONOLITHIC)
 #define main bson_hello_example_main
