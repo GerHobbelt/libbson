@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <mongoc-bulkwrite.h>
+#include <mongoc/mongoc-bulkwrite.h>
 
 #include <bson/bson.h>
 #include <common-macros-private.h> // MC_ENABLE_CONVERSION_WARNING_BEGIN
@@ -24,7 +24,6 @@
 #include <mongoc/mongoc-client-private.h>
 #include <mongoc/mongoc-client-side-encryption-private.h>
 #include <mongoc/mongoc-error.h>
-#include <mongoc/mongoc-error-private.h> // _mongoc_write_error_handle_labels
 #include <mongoc/mongoc-server-stream-private.h>
 #include <mongoc/mongoc-util-private.h> // _mongoc_iter_document_as_bson
 #include <mongoc/mongoc-optional.h>
@@ -1326,6 +1325,7 @@ _bulkwritereturn_apply_reply (mongoc_bulkwritereturn_t *self, const bson_t *cmd_
          if (!_mongoc_iter_document_as_bson (&wce_iter, &errInfo, &error)) {
             _bulkwriteexception_set_error (self->exc, &error);
             _bulkwriteexception_set_error_reply (self->exc, cmd_reply);
+            return false;
          }
       }
 
@@ -1558,6 +1558,9 @@ mongoc_bulkwrite_execute (mongoc_bulkwrite_t *self, const mongoc_bulkwriteopts_t
       goto fail;
    }
 
+   const mongoc_ss_log_context_t ss_log_context = {
+      .operation = "bulkWrite", .has_operation_id = true, .operation_id = self->operation_id};
+
    // Select a stream.
    {
       bson_t reply;
@@ -1567,7 +1570,7 @@ mongoc_bulkwrite_execute (mongoc_bulkwrite_t *self, const mongoc_bulkwriteopts_t
             &self->client->cluster, opts->serverid, true /* reconnect_ok */, self->session, &reply, &error);
       } else {
          ss = mongoc_cluster_stream_for_writes (
-            &self->client->cluster, self->session, NULL /* deprioritized servers */, &reply, &error);
+            &self->client->cluster, &ss_log_context, self->session, NULL /* deprioritized servers */, &reply, &error);
       }
 
       if (!ss) {
@@ -1815,8 +1818,12 @@ mongoc_bulkwrite_execute (mongoc_bulkwrite_t *self, const mongoc_bulkwriteopts_t
             bson_t reply;
             // Select a server and create a stream again.
             mongoc_server_stream_cleanup (ss);
-            ss = mongoc_cluster_stream_for_writes (
-               &self->client->cluster, NULL /* session */, NULL /* deprioritized servers */, &reply, &error);
+            ss = mongoc_cluster_stream_for_writes (&self->client->cluster,
+                                                   &ss_log_context,
+                                                   NULL /* session */,
+                                                   NULL /* deprioritized servers */,
+                                                   &reply,
+                                                   &error);
 
             if (ss) {
                parts.assembled.server_stream = ss;
