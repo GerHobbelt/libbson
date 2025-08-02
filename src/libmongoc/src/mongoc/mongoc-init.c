@@ -27,8 +27,6 @@
 
 #ifdef MONGOC_ENABLE_SSL_OPENSSL
 #include <mongoc/mongoc-openssl-private.h>
-#elif defined(MONGOC_ENABLE_SSL_LIBRESSL)
-#include <tls.h>
 #endif
 #include <mongoc/mongoc-thread-private.h>
 #include <common-b64-private.h>
@@ -57,7 +55,6 @@ BEGIN_IGNORE_DEPRECATIONS
 
 #ifdef MONGOC_ENABLE_SASL_CYRUS
 #include <sasl/sasl.h>
-#include <mongoc/mongoc-cyrus-private.h> // _mongoc_cyrus_verifyfile_cb
 
 static void *
 mongoc_cyrus_mutex_alloc (void)
@@ -106,8 +103,6 @@ static BSON_ONCE_FUN (_mongoc_do_init)
 #endif
 #ifdef MONGOC_ENABLE_SSL_OPENSSL
    _mongoc_openssl_init ();
-#elif defined(MONGOC_ENABLE_SSL_LIBRESSL)
-   tls_init ();
 #endif
 
 #ifdef MONGOC_ENABLE_SASL_CYRUS
@@ -116,13 +111,7 @@ static BSON_ONCE_FUN (_mongoc_do_init)
    sasl_set_mutex (
       mongoc_cyrus_mutex_alloc, mongoc_cyrus_mutex_lock, mongoc_cyrus_mutex_unlock, mongoc_cyrus_mutex_free);
 
-   MC_DISABLE_CAST_FUNCTION_TYPE_STRICT_WARNING_BEGIN
-   sasl_callback_t callbacks[] = {// Include callback to disable loading plugins.
-                                  {SASL_CB_VERIFYFILE, SASL_CALLBACK_FN (_mongoc_cyrus_verifyfile_cb), NULL},
-                                  {SASL_CB_LIST_END}};
-   MC_DISABLE_CAST_FUNCTION_TYPE_STRICT_WARNING_END
-
-   status = sasl_client_init (callbacks);
+   status = sasl_client_init (NULL);
    BSON_ASSERT (status == SASL_OK);
 #endif
 
