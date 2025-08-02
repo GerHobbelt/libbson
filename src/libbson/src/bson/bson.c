@@ -82,7 +82,7 @@ _bson_as_json_visit_all (
 /*
  * Globals.
  */
-static const uint8_t gZero;
+static const uint8_t gZero = 0;
 
 /*
  *--------------------------------------------------------------------------
