@@ -76,7 +76,7 @@
 /*
  * Microsoft Visual C
  */
-#ifdef BSON_STATIC
+#if defined(BSON_STATIC) || defined(BUILD_MONOLITHIC)
 #define BSON_API
 #elif defined(BSON_COMPILATION)
 #define BSON_API __declspec (dllexport)
@@ -89,7 +89,7 @@
 /*
  * GCC
  */
-#ifdef BSON_STATIC
+#if defined(BSON_STATIC) || defined(BUILD_MONOLITHIC)
 #define BSON_API
 #elif defined(BSON_COMPILATION)
 #define BSON_API __attribute__ ((visibility ("default")))
