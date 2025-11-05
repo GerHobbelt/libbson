@@ -19,6 +19,12 @@
 #include <stdint.h> /* for INT64_MAX and INT64_MIN */
 #include <string.h>
 
+#ifdef _MSC_VER
+#pragma warning(disable:4028)
+#pragma warning(disable:4244)
+#endif
+
+
 #if 2 < __GNUC__ + (96 <= __GNUC_MINOR__)
 #define ATTRIBUTE_PURE __attribute__ ((__pure__))
 #else

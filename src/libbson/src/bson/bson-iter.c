@@ -24,6 +24,10 @@
 #include <mlib/cmp.h>
 #include <mlib/intencode.h>
 
+#ifdef _MSC_VER
+#pragma warning(disable:4267)
+#endif
+
 #define ITER_TYPE(i) ((bson_type_t) * ((i)->raw + (i)->type))
 
 

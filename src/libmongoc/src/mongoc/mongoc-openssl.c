@@ -52,6 +52,7 @@
 
 #ifdef _WIN32
 #include <wincrypt.h>
+#undef X509_NAME
 #endif
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L

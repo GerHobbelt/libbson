@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+#ifdef __linux__
+   #define _GNU_SOURCE
+#endif
+
 #include <mongoc/mongoc-config.h>
 
 #include <bson/bson.h>

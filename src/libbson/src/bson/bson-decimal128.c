@@ -28,6 +28,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _MSC_VER
+#pragma warning(disable:4028)
+#pragma warning(disable:4267)
+#endif
+
 
 #define BSON_DECIMAL128_EXPONENT_MAX 6111
 #define BSON_DECIMAL128_EXPONENT_MIN -6176

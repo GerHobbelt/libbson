@@ -33,6 +33,7 @@
 
 
 #ifdef BSON_OS_WIN32
+#include "sdkddkver.h"
 #if defined(_WIN32_WINNT) && (_WIN32_WINNT < 0x0601)
 #undef _WIN32_WINNT
 #endif
@@ -52,6 +53,7 @@
 #endif
 #include <direct.h>
 #include <io.h>
+#include <inttypes.h>
 #endif
 
 
@@ -166,7 +168,7 @@ typedef RTL_RUN_ONCE INIT_ONCE;
 #endif
 
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 /** Expands the arguments if compiling with MSVC, otherwise empty */
 #define BSON_IF_MSVC(...) __VA_ARGS__
 /** Expands the arguments if compiling with GCC or Clang, otherwise empty */
